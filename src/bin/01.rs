@@ -1,4 +1,3 @@
-use anyhow::Result;
 use atoi_simd::parse;
 
 advent_of_code::solution!(1);
@@ -21,7 +20,7 @@ impl Default for Dial {
     }
 }
 impl Dial {
-    pub fn handle_instruction(&mut self, amount: i64) -> Result<()> {
+    pub fn handle_instruction(&mut self, amount: i64) {
         let steps = amount.abs();
 
         let mut dist_to_first = if amount > 0 {
@@ -45,8 +44,6 @@ impl Dial {
         if self.dial == 0 {
             self.part1_zeroes += 1;
         }
-
-        Ok(())
     }
 }
 
@@ -57,7 +54,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         .map(|l| l.split_at(1))
         .map(|(direction, amount)| (direction, parse::<i64>(amount.as_bytes()).unwrap()))
         .map(|(direction, amount)| if direction == "L" { -amount } else { amount })
-        .for_each(|amount| dial.handle_instruction(amount).unwrap());
+        .for_each(|amount| dial.handle_instruction(amount));
 
     Some(dial.part1_zeroes)
 }
@@ -69,7 +66,7 @@ pub fn part_two(input: &str) -> Option<u64> {
         .map(|l| l.split_at(1)) // R 51 or L 21
         .map(|(direction, amount)| (direction, parse::<i64>(amount.as_bytes()).unwrap()))
         .map(|(direction, amount)| if direction == "L" { -amount } else { amount })
-        .for_each(|l| dial.handle_instruction(l).unwrap());
+        .for_each(|l| dial.handle_instruction(l));
 
     Some(dial.part2_zeroes)
 }
