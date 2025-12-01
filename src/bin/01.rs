@@ -10,6 +10,7 @@ pub struct Dial {
     part1_zeroes: u64,
     part2_zeroes: u64,
 }
+
 impl Default for Dial {
     fn default() -> Self {
         Self {
@@ -19,26 +20,33 @@ impl Default for Dial {
         }
     }
 }
+
 impl Dial {
+    /// Receives the amount to shift, already adjusted for direction (negative for left, positive
+    /// for right). Populates the zero counters for part 1 and part 2.
     pub fn handle_instruction(&mut self, amount: i64) {
         let steps = amount.abs();
 
+        // Find how far before zero is "touched" the first time
         let mut dist_to_first = if amount > 0 {
             (SPOT_COUNT - self.dial).rem_euclid(SPOT_COUNT)
         } else {
             self.dial.rem_euclid(SPOT_COUNT)
         };
 
+        // If already on zero, have to go a full rotation to "touch" it again
         if dist_to_first == 0 {
             dist_to_first = SPOT_COUNT;
         }
 
         self.part2_zeroes += if steps < dist_to_first {
-            0
+            0 // didn't move enough to touch zero
         } else {
+            // crossed zero, plus to count how many more times that happened
             1 + ((steps - dist_to_first) / SPOT_COUNT) as u64
         };
 
+        // shift the actual dial by the amount
         self.dial = (self.dial + amount).rem_euclid(SPOT_COUNT);
 
         if self.dial == 0 {
