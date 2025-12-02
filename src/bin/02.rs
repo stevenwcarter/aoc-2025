@@ -3,7 +3,7 @@ advent_of_code::solution!(2);
 use std::ops::RangeInclusive;
 
 use atoi_simd::parse;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 fn extract_digits(value: usize) -> Vec<u8> {
     let mut value = value;
@@ -17,16 +17,28 @@ fn extract_digits(value: usize) -> Vec<u8> {
     })
 }
 
-fn is_even_length(value: usize) -> bool {
+fn is_even_length(value: usize) -> Option<usize> {
     let len: usize = (value.ilog10() + 1) as usize;
-    len.is_multiple_of(2)
+    if len.is_multiple_of(2) {
+        Some(len)
+    } else {
+        None
+    }
 }
 
-fn is_valid_id(number: usize) -> bool {
-    let len: usize = (number.ilog10() + 1) as usize;
-    let half = len / 2;
+fn is_valid_id(number: usize, length: usize) -> bool {
+    let half = length / 2;
 
+    // 123123 becomes 123  123 in the two halves of this check
     number / 10usize.pow(half as u32) != number % (10usize.pow(half as u32))
+}
+
+fn part_one_range_sum(range: RangeInclusive<usize>) -> usize {
+    range
+        .filter_map(|n| is_even_length(n).map(|length| (n, length)))
+        .filter(|(n, length)| !is_valid_id(*n, *length))
+        .map(|(n, _)| n)
+        .sum::<usize>()
 }
 
 fn is_valid_id_part_2(number: usize) -> bool {
@@ -53,9 +65,9 @@ fn is_valid_id_part_2(number: usize) -> bool {
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let ranges: Vec<&str> = input.split(',').collect();
-    let ranges: Vec<RangeInclusive<usize>> = ranges
-        .iter()
+    let range_sum: usize = input
+        .split(',')
+        .par_bridge()
         .map(|r| r.split_once('-').unwrap())
         .map(|(a, b)| {
             (
@@ -64,24 +76,16 @@ pub fn part_one(input: &str) -> Option<usize> {
             )
         })
         .map(|(a, b)| a..=b)
-        .collect();
-    Some(
-        ranges
-            .par_iter()
-            .map(|r| {
-                r.clone()
-                    .filter(|n| is_even_length(*n))
-                    .filter(|&n| !is_valid_id(n))
-                    .sum::<usize>()
-            })
-            .sum::<usize>(),
-    )
+        .map(|r| part_one_range_sum(r.clone()))
+        .sum::<usize>();
+
+    Some(range_sum)
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    let ranges: Vec<&str> = input.split(',').collect();
-    let ranges: Vec<RangeInclusive<usize>> = ranges
-        .iter()
+    let range_sum: usize = input
+        .split(',')
+        .par_bridge()
         .map(|r| r.split_once('-').unwrap())
         .map(|(a, b)| {
             (
@@ -90,13 +94,10 @@ pub fn part_two(input: &str) -> Option<usize> {
             )
         })
         .map(|(a, b)| a..=b)
-        .collect();
-    Some(
-        ranges
-            .par_iter()
-            .map(|r| r.clone().filter(|&n| !is_valid_id_part_2(n)).sum::<usize>())
-            .sum::<usize>(),
-    )
+        .map(|r| r.clone().filter(|&n| !is_valid_id_part_2(n)).sum::<usize>())
+        .sum::<usize>();
+
+    Some(range_sum)
 }
 
 #[cfg(test)]
@@ -116,7 +117,7 @@ mod tests {
     }
     #[test]
     fn test_is_valid_id() {
-        assert!(is_valid_id(123125));
-        assert!(!is_valid_id(123123));
+        assert!(is_valid_id(123125, 6));
+        assert!(!is_valid_id(123123, 6));
     }
 }
