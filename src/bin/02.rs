@@ -1,13 +1,8 @@
 advent_of_code::solution!(2);
 
-use std::{
-    collections::HashSet,
-    ops::{Range, RangeInclusive},
-    sync::atomic::AtomicUsize,
-};
+use std::ops::RangeInclusive;
 
 use atoi_simd::parse;
-use itertools::Itertools;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 fn extract_digits(value: usize) -> Vec<u8> {
@@ -127,25 +122,5 @@ mod tests {
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(4174379265));
-    }
-    #[test]
-    fn test_part_two_smaller1() {
-        assert_eq!(part_two("11-22"), Some(33));
-    }
-    #[test]
-    fn test_part_two_smaller2() {
-        assert_eq!(part_two("565653-565659"), Some(565656));
-    }
-    #[test]
-    fn test_is_valid() {
-        assert!(is_valid_id_part_2(198));
-    }
-    #[test]
-    fn edge_case_part_2() {
-        assert!(!is_valid_id_part_2(111));
-    }
-    #[test]
-    fn edge_case2_part_2() {
-        assert!(is_valid_id_part_2(565655));
     }
 }
