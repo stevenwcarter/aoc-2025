@@ -29,3 +29,5 @@ dhat-heap.json
 
 data/timings.json
 /*.txt
+dhat*
+flamegraph.svg
