@@ -23,25 +23,16 @@ fn is_even_length(value: usize) -> bool {
 }
 
 fn is_valid_id(number: usize) -> bool {
-    let digits = extract_digits(number);
-    let len = digits.len();
+    let len: usize = (number.ilog10() + 1) as usize;
     let half = len / 2;
 
-    for i in 0..half {
-        let comparator = digits[i + half];
-        if digits[i] != comparator {
-            return true;
-        }
-    }
-
-    false
+    number / 10usize.pow(half as u32) != number % (10usize.pow(half as u32))
 }
+
 fn is_valid_id_part_2(number: usize) -> bool {
     let digits = extract_digits(number);
     let len = digits.len();
     let half = len / 2 + 1;
-
-    // dbg!(&digits, len, half);
 
     'outer_loop: for repeat_size in 1..half {
         if !len.is_multiple_of(repeat_size) {
@@ -122,5 +113,10 @@ mod tests {
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(4174379265));
+    }
+    #[test]
+    fn test_is_valid_id() {
+        assert!(is_valid_id(123125));
+        assert!(!is_valid_id(123123));
     }
 }
