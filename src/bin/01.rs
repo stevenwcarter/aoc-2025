@@ -27,7 +27,7 @@ impl Dial {
     pub fn handle_instruction(&mut self, amount: i64) {
         let steps = amount.abs();
 
-        // Find how far before zero is "touched" the first time
+        // Find how far before zero is "touched" the first time zero the first time
         let mut dist_to_first = if amount > 0 {
             (SPOT_COUNT - self.dial).rem_euclid(SPOT_COUNT)
         } else {
