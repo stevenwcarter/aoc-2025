@@ -1,5 +1,4 @@
 use advent_of_code::Coord;
-use hashbrown::HashSet;
 
 advent_of_code::solution!(4);
 
@@ -46,60 +45,60 @@ impl Grid {
         }
     }
 
+    fn index_to_coord(&self, index: usize) -> Coord {
+        let x = (index % self.width) as i32;
+        let y = (index / self.width) as i32;
+        Coord::new(x, y)
+    }
+    fn coord_to_index(&self, coord: &Coord) -> usize {
+        coord.y() as usize * self.width + coord.x() as usize
+    }
+
     pub fn find_moveable_papers(&self) -> Option<Vec<Coord>> {
         let tiles: Vec<Coord> = self
             .tiles
             .iter()
             .enumerate()
-            .filter_map(|(i, tile)| match tile {
-                TileType::Paper => {
-                    let x = (i % self.width) as i32;
-                    let y = (i / self.width) as i32;
-                    let coord = Coord::new(x, y);
-                    let count = coord
-                        .neighbors()
-                        .iter()
-                        .filter(|neighbor| matches!(self.get(neighbor), Some(TileType::Paper)))
-                        .count();
-                    if count < MOVEABLE_PAPER_LIMIT {
-                        Some(coord)
-                    } else {
-                        None
-                    }
-                }
-                TileType::Empty => None,
+            .filter(|(_, tile)| matches!(tile, TileType::Paper))
+            .map(|(i, _)| self.index_to_coord(i))
+            .map(|coord| {
+                let count = coord
+                    .neighbors()
+                    .iter()
+                    .filter(|neighbor| matches!(self.get(neighbor), Some(TileType::Paper)))
+                    .count();
+                (coord, count)
             })
+            .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
+            .map(|(coord, _)| coord)
             .collect();
 
         if tiles.is_empty() { None } else { Some(tiles) }
     }
-    pub fn find_moveable_papers_count(&self) -> usize {
-        self.find_moveable_papers().unwrap().len()
+    pub fn find_moveable_papers_count(&self) -> Option<usize> {
+        Some(self.find_moveable_papers().unwrap().len())
     }
     pub fn remove_paper(&mut self, coord: &Coord) {
-        self.tiles[coord.y() as usize * self.width + coord.x() as usize] = TileType::Empty;
+        let index = self.coord_to_index(coord);
+        self.tiles[index] = TileType::Empty;
     }
-    pub fn find_moveable_papers_count_part2(&mut self) -> usize {
+    pub fn find_moveable_papers_count_part2(&mut self) -> Option<usize> {
         let mut total = 0;
         while let Some(moveable_papers) = self.find_moveable_papers() {
             total += moveable_papers.len();
 
             moveable_papers.iter().for_each(|c| self.remove_paper(c));
         }
-        total
+        Some(total)
     }
 }
 
-pub fn part_one(input: &str) -> Option<u64> {
-    let grid = Grid::new(input);
-
-    Some(grid.find_moveable_papers_count() as u64)
+pub fn part_one(input: &str) -> Option<usize> {
+    Grid::new(input).find_moveable_papers_count()
 }
 
-pub fn part_two(input: &str) -> Option<u64> {
-    let mut grid = Grid::new(input);
-
-    Some(grid.find_moveable_papers_count_part2() as u64)
+pub fn part_two(input: &str) -> Option<usize> {
+    Grid::new(input).find_moveable_papers_count_part2()
 }
 
 #[cfg(test)]
