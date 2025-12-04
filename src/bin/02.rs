@@ -1,103 +1,84 @@
 advent_of_code::solution!(2);
 
-use std::ops::RangeInclusive;
-
 use atoi_simd::parse;
+use hashbrown::HashSet;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-fn extract_digits(value: usize) -> Vec<u8> {
-    let mut value = value;
+fn construct_repetitive(seed: usize, repetitions: usize, seed_len: u32) -> usize {
+    let mut result = seed;
+    let multiplier = 10_usize.pow(seed_len);
 
-    let count: usize = (value.ilog10() + 1) as usize;
-
-    (0..count).rev().fold(vec![0; count], |mut container, i| {
-        container[i] = (value % 10) as u8;
-        value /= 10;
-        container
-    })
-}
-
-fn is_even_length(value: usize) -> Option<usize> {
-    let len: usize = (value.ilog10() + 1) as usize;
-    if len.is_multiple_of(2) {
-        Some(len)
-    } else {
-        None
+    for _ in 1..repetitions {
+        result = result * multiplier + seed;
     }
+    result
 }
 
-fn is_valid_id(number: usize, length: usize) -> bool {
-    let half = length / 2;
+fn generate_invalid_numbers(min: usize, max: usize, part1: bool) -> HashSet<usize> {
+    let mut invalid_numbers = HashSet::new();
 
-    // 123123 becomes 123  123 in the two halves of this check
-    number / 10usize.pow(half as u32) != number % (10usize.pow(half as u32))
-}
+    // calculate digit lengths
+    let min_len = min.ilog10() + 1;
+    let max_len = max.ilog10() + 1;
 
-fn part_one_range_sum(range: RangeInclusive<usize>) -> usize {
-    range
-        .filter_map(|n| is_even_length(n).map(|length| (n, length)))
-        .filter(|(n, length)| !is_valid_id(*n, *length))
-        .map(|(n, _)| n)
-        .sum::<usize>()
-}
+    for total_len in min_len..=max_len {
+        let seed_lengths: Vec<u32> = if part1 {
+            vec![total_len / 2]
+        } else {
+            (1..=total_len / 2)
+                .filter(|&len| total_len % len == 0)
+                .collect()
+        };
 
-fn is_valid_id_part_2(number: usize) -> bool {
-    let digits = extract_digits(number);
-    let len = digits.len();
-    let half = len / 2 + 1;
+        for seed_len in seed_lengths {
+            let repetitions = if part1 {
+                2
+            } else {
+                (total_len / seed_len) as usize
+            };
 
-    'outer_loop: for repeat_size in 1..half {
-        if !len.is_multiple_of(repeat_size) {
-            continue;
-        }
-        let mut i = repeat_size;
-        let check = &digits[0..repeat_size];
-        while i <= len - repeat_size {
-            if &digits[i..repeat_size + i] != check {
-                continue 'outer_loop;
+            let start_seed = 10_usize.pow(seed_len - 1);
+            let end_seed = 10_usize.pow(seed_len) - 1;
+
+            for seed in start_seed..=end_seed {
+                let candidate = construct_repetitive(seed, repetitions, seed_len);
+
+                if candidate >= min && candidate <= max {
+                    invalid_numbers.insert(candidate);
+                }
             }
-            i += repeat_size;
         }
-        return false;
     }
 
-    true
+    invalid_numbers
+}
+
+fn solve(input: &str, part1: bool) -> Option<usize> {
+    let range_sum: usize = input
+        .split(',')
+        .par_bridge()
+        .map(|r| r.split_once('-').unwrap())
+        .map(|(a, b)| {
+            (
+                parse::<usize>(a.trim().as_bytes()).unwrap(),
+                parse::<usize>(b.trim().as_bytes()).unwrap(),
+            )
+        })
+        .map(|(min, max)| {
+            let invalids = generate_invalid_numbers(min, max, part1);
+            invalids.iter().sum::<usize>()
+        })
+        .sum::<usize>();
+
+    Some(range_sum)
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let range_sum: usize = input
-        .split(',')
-        .par_bridge()
-        .map(|r| r.split_once('-').unwrap())
-        .map(|(a, b)| {
-            (
-                parse::<usize>(a.trim().as_bytes()).unwrap(),
-                parse::<usize>(b.trim().as_bytes()).unwrap(),
-            )
-        })
-        .map(|(a, b)| a..=b)
-        .map(|r| part_one_range_sum(r.clone()))
-        .sum::<usize>();
-
-    Some(range_sum)
+    solve(input, true)
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    let range_sum: usize = input
-        .split(',')
-        .par_bridge()
-        .map(|r| r.split_once('-').unwrap())
-        .map(|(a, b)| {
-            (
-                parse::<usize>(a.trim().as_bytes()).unwrap(),
-                parse::<usize>(b.trim().as_bytes()).unwrap(),
-            )
-        })
-        .map(|(a, b)| a..=b)
-        .map(|r| r.clone().filter(|&n| !is_valid_id_part_2(n)).sum::<usize>())
-        .sum::<usize>();
-
-    Some(range_sum)
+    solve(input, false)
 }
 
 #[cfg(test)]
@@ -114,10 +95,5 @@ mod tests {
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(4174379265));
-    }
-    #[test]
-    fn test_is_valid_id() {
-        assert!(is_valid_id(123125, 6));
-        assert!(!is_valid_id(123123, 6));
     }
 }
