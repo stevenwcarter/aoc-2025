@@ -3,6 +3,8 @@ use hashbrown::HashSet;
 
 advent_of_code::solution!(4);
 
+const MOVEABLE_PAPER_LIMIT: usize = 4; // less than this amount
+
 pub enum TileType {
     Paper,
     Empty,
@@ -44,8 +46,9 @@ impl Grid {
         }
     }
 
-    pub fn find_moveable_papers(&self) -> Vec<Coord> {
-        self.tiles
+    pub fn find_moveable_papers(&self) -> Option<Vec<Coord>> {
+        let tiles: Vec<Coord> = self
+            .tiles
             .iter()
             .enumerate()
             .filter_map(|(i, tile)| match tile {
@@ -58,32 +61,28 @@ impl Grid {
                         .iter()
                         .filter(|neighbor| matches!(self.get(neighbor), Some(TileType::Paper)))
                         .count();
-                    if count < 4 { Some(coord) } else { None }
+                    if count < MOVEABLE_PAPER_LIMIT {
+                        Some(coord)
+                    } else {
+                        None
+                    }
                 }
                 TileType::Empty => None,
             })
-            .collect()
+            .collect();
+
+        if tiles.is_empty() { None } else { Some(tiles) }
     }
     pub fn find_moveable_papers_count(&self) -> usize {
-        self.find_moveable_papers().len()
+        self.find_moveable_papers().unwrap().len()
     }
     pub fn remove_paper(&mut self, coord: &Coord) {
         self.tiles[coord.y() as usize * self.width + coord.x() as usize] = TileType::Empty;
     }
     pub fn find_moveable_papers_count_part2(&mut self) -> usize {
-        let mut loop_count = 0;
         let mut total = 0;
-        loop {
-            let moveable_papers = self.find_moveable_papers();
+        while let Some(moveable_papers) = self.find_moveable_papers() {
             total += moveable_papers.len();
-            if moveable_papers.is_empty() {
-                break;
-            }
-
-            if loop_count > 5000 {
-                break;
-            }
-            loop_count += 1;
 
             moveable_papers.iter().for_each(|c| self.remove_paper(c));
         }
