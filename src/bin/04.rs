@@ -57,6 +57,14 @@ impl Grid {
         coord.y() as usize * self.width + coord.x() as usize
     }
 
+    fn count_neighbors_with_paper(&self, coord: &Coord) -> usize {
+        coord
+            .neighbors()
+            .iter()
+            .filter(|neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
+            .count()
+    }
+
     pub fn find_moveable_papers_part1(&self) -> Option<usize> {
         Some(
             self.tiles
@@ -64,64 +72,47 @@ impl Grid {
                 .enumerate()
                 .filter(|(_, tile)| matches!(tile, TileType::Paper))
                 .map(|(i, _)| self.index_to_coord(i))
-                .map(|coord| {
-                    let count = coord
-                        .neighbors()
-                        .iter()
-                        .filter(|neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
-                        .count();
-                    (coord, count)
-                })
+                .map(|coord| (coord, self.count_neighbors_with_paper(&coord)))
                 .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
-                .map(|(coord, _)| coord)
                 .count(),
         )
     }
 
     pub fn find_moveable_papers_part2(&mut self) -> Option<usize> {
-        let mut q = VecDeque::new();
         let mut removed_count = 0;
 
-        self.tiles
-            .iter()
-            .enumerate()
-            .filter(|(_, tile)| matches!(tile, TileType::Paper))
-            .map(|(i, _)| self.index_to_coord(i))
-            .for_each(|coord| {
-                let count = coord
-                    .neighbors()
-                    .iter()
-                    .filter(|neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
-                    .count();
-                if count < MOVEABLE_PAPER_LIMIT {
-                    q.push_back(coord);
-                }
-            });
+        let mut q: VecDeque<Coord> = VecDeque::with_capacity(2000);
+        q.extend(
+            self.tiles
+                .iter()
+                .enumerate()
+                .filter(|(_, tile)| matches!(tile, TileType::Paper))
+                .map(|(i, _)| self.index_to_coord(i))
+                .map(|coord| (coord, self.count_neighbors_with_paper(&coord)))
+                .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
+                .map(|(coord, _)| coord),
+        );
 
+        // ANIMATE: animate removal passes
         while let Some(coord) = q.pop_front() {
-            let index = self.coord_to_index(&coord);
-
-            if !matches!(self.tiles[index], TileType::Paper) {
+            if !matches!(self.get_tile(&coord), Some(TileType::Paper)) {
                 continue;
             }
 
             self.remove_paper(&coord);
             removed_count += 1;
 
-            coord.neighbors().iter().for_each(|neighbor| {
-                if !matches!(self.get_tile(neighbor), Some(TileType::Paper)) {
-                    return;
-                }
-                let count = neighbor
+            q.extend(
+                coord
                     .neighbors()
                     .iter()
-                    .filter(|n| matches!(self.get_tile(n), Some(TileType::Paper)))
-                    .count();
-                if count < MOVEABLE_PAPER_LIMIT {
-                    q.push_back(*neighbor);
-                }
-            });
+                    .filter(|neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
+                    .map(|n| (n, self.count_neighbors_with_paper(n)))
+                    .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
+                    .map(|(neighbor, _)| neighbor),
+            );
         }
+
         Some(removed_count)
     }
 
