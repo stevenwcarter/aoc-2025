@@ -12,7 +12,8 @@ fn maximize_battery_from_line(line: &[u8], length: usize) -> usize {
                 .max_by_key(|&index| line[index])
                 .expect("not enough digits remaining");
             index_tracker = best_index + 1;
-            line[best_index]
+            // hack to convert ascii digit convert to numerical digit
+            line[best_index] - b'0'
         })
         // convert digits to a single number
         .fold(0usize, |acc, d| acc * 10 + d as usize)
@@ -22,8 +23,7 @@ pub fn part_one(input: &str) -> Option<usize> {
     Some(
         input
             .lines()
-            .map(|l| l.chars().map(|c| c as u8 - b'0').collect::<Vec<u8>>())
-            .map(|line| maximize_battery_from_line(&line, 2))
+            .map(|line| maximize_battery_from_line(line.as_bytes(), 2))
             .sum::<usize>(),
     )
 }
@@ -32,8 +32,7 @@ pub fn part_two(input: &str) -> Option<usize> {
     Some(
         input
             .lines()
-            .map(|l| l.chars().map(|c| c as u8 - b'0').collect::<Vec<u8>>())
-            .map(|line| maximize_battery_from_line(&line, 12))
+            .map(|line| maximize_battery_from_line(line.as_bytes(), 12))
             .sum::<usize>(),
     )
 }
