@@ -22,36 +22,43 @@ impl Default for Dial {
 }
 
 impl Dial {
+    #[inline(always)]
+    fn fast_mod_100(n: i64) -> i64 {
+        let mut result = n % SPOT_COUNT;
+        if result < 0 {
+            result += SPOT_COUNT;
+        }
+        result
+    }
+
     /// Receives the amount to shift, already adjusted for direction (negative for left, positive
-    /// for right). Populates the zero counters for part 1 and part 2.
-    pub fn handle_instruction(&mut self, amount: i64) {
+    /// for right).
+    pub fn handle_instruction_part1(&mut self, amount: i64) {
+        self.dial = Self::fast_mod_100(self.dial + amount);
+
+        // Branchless part 1 increment
+        self.part1_zeroes += (self.dial == 0) as u64;
+    }
+
+    pub fn handle_instruction_part2(&mut self, amount: i64) {
         let steps = amount.abs();
 
-        // Find how far before zero is "touched" the first time zero the first time
-        let mut dist_to_first = if amount > 0 {
-            (SPOT_COUNT - self.dial).rem_euclid(SPOT_COUNT)
-        } else {
-            self.dial.rem_euclid(SPOT_COUNT)
-        };
+        // branchless distance calculation
+        let is_positive = (amount > 0) as i64;
+        let mut dist_to_first =
+            is_positive * (SPOT_COUNT - self.dial) + (1 - is_positive) * self.dial;
+        dist_to_first = Self::fast_mod_100(dist_to_first);
 
         // If already on zero, have to go a full rotation to "touch" it again
-        if dist_to_first == 0 {
-            dist_to_first = SPOT_COUNT;
-        }
+        dist_to_first += SPOT_COUNT * (dist_to_first == 0) as i64;
 
-        self.part2_zeroes += if steps < dist_to_first {
-            0 // didn't move enough to touch zero
-        } else {
-            // crossed zero, plus to count how many more times that happened
-            1 + ((steps - dist_to_first) / SPOT_COUNT) as u64
-        };
+        // Branchless part 2 calculation
+        let crosses_zero = (steps >= dist_to_first) as u64;
+        let additional_crosses = ((steps.saturating_sub(dist_to_first)) / SPOT_COUNT) as u64;
+        self.part2_zeroes += crosses_zero * (1 + additional_crosses);
 
         // shift the actual dial by the amount
-        self.dial = (self.dial + amount).rem_euclid(SPOT_COUNT);
-
-        if self.dial == 0 {
-            self.part1_zeroes += 1;
-        }
+        self.dial = Self::fast_mod_100(self.dial + amount);
     }
 }
 
@@ -62,7 +69,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         .map(|l| l.split_at(1))
         .map(|(direction, amount)| (direction, parse::<i64>(amount.as_bytes()).unwrap()))
         .map(|(direction, amount)| if direction == "L" { -amount } else { amount })
-        .for_each(|amount| dial.handle_instruction(amount));
+        .for_each(|amount| dial.handle_instruction_part1(amount));
 
     Some(dial.part1_zeroes)
 }
@@ -74,7 +81,7 @@ pub fn part_two(input: &str) -> Option<u64> {
         .map(|l| l.split_at(1)) // R 51 or L 21
         .map(|(direction, amount)| (direction, parse::<i64>(amount.as_bytes()).unwrap()))
         .map(|(direction, amount)| if direction == "L" { -amount } else { amount })
-        .for_each(|l| dial.handle_instruction(l));
+        .for_each(|l| dial.handle_instruction_part2(l));
 
     Some(dial.part2_zeroes)
 }
