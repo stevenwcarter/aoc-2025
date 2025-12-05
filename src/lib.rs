@@ -50,3 +50,27 @@ impl From<Coord> for (i32, i32) {
         (coord.0, coord.1)
     }
 }
+
+/// Condense overlapping and contiguous ranges into minimal set of ranges
+///
+/// For example, 1-3, 2-5 becomes 1-5
+pub fn condense_ranges(ranges: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    let mut sorted_ranges = ranges.to_vec();
+    sorted_ranges.sort_by_key(|&(start, _)| start);
+
+    let mut condensed: Vec<(usize, usize)> = Vec::new();
+
+    for &(start, end) in &sorted_ranges {
+        if let Some(&mut (_, ref mut last_end)) = condensed.last_mut() {
+            if start <= *last_end + 1 {
+                *last_end = (*last_end).max(end);
+            } else {
+                condensed.push((start, end));
+            }
+        } else {
+            condensed.push((start, end));
+        }
+    }
+
+    condensed
+}
