@@ -11,10 +11,11 @@ fn construct_repetitive(seed: usize, repetitions: usize, seed_len: u32) -> usize
     for _ in 1..repetitions {
         result = result * multiplier + seed;
     }
+
     result
 }
 
-fn generate_invalid_numbers(min: usize, max: usize, part1: bool) -> HashSet<usize> {
+fn generate_invalid_numbers_part1(min: usize, max: usize) -> HashSet<usize> {
     let mut invalid_numbers = HashSet::new();
 
     // calculate digit lengths
@@ -22,20 +23,40 @@ fn generate_invalid_numbers(min: usize, max: usize, part1: bool) -> HashSet<usiz
     let max_len = max.ilog10() + 1;
 
     for total_len in min_len..=max_len {
-        let seed_lengths: Vec<u32> = if part1 {
-            vec![total_len / 2]
-        } else {
-            (1..=total_len / 2)
-                .filter(|&len| total_len % len == 0)
-                .collect()
-        };
+        let seed_lengths: Vec<u32> = vec![total_len / 2];
 
         for seed_len in seed_lengths {
-            let repetitions = if part1 {
-                2
-            } else {
-                (total_len / seed_len) as usize
-            };
+            let repetitions = 2;
+
+            let start_seed = 10_usize.pow(seed_len - 1);
+            let end_seed = 10_usize.pow(seed_len) - 1;
+
+            for seed in start_seed..=end_seed {
+                let candidate = construct_repetitive(seed, repetitions, seed_len);
+
+                if candidate >= min && candidate <= max {
+                    invalid_numbers.insert(candidate);
+                }
+            }
+        }
+    }
+
+    invalid_numbers
+}
+fn generate_invalid_numbers_part2(min: usize, max: usize) -> HashSet<usize> {
+    let mut invalid_numbers = HashSet::new();
+
+    // calculate digit lengths
+    let min_len = min.ilog10() + 1;
+    let max_len = max.ilog10() + 1;
+
+    for total_len in min_len..=max_len {
+        let seed_lengths: Vec<u32> = (1..=total_len / 2)
+            .filter(|&len| total_len % len == 0)
+            .collect();
+
+        for seed_len in seed_lengths {
+            let repetitions = (total_len / seed_len) as usize;
 
             let start_seed = 10_usize.pow(seed_len - 1);
             let end_seed = 10_usize.pow(seed_len) - 1;
@@ -54,23 +75,27 @@ fn generate_invalid_numbers(min: usize, max: usize, part1: bool) -> HashSet<usiz
 }
 
 fn solve(input: &str, part1: bool) -> Option<usize> {
-    let range_sum: usize = input
-        .split(',')
-        .par_bridge()
-        .map(|r| r.split_once('-').unwrap())
-        .map(|(a, b)| {
-            (
-                parse::<usize>(a.trim().as_bytes()).unwrap(),
-                parse::<usize>(b.trim().as_bytes()).unwrap(),
-            )
-        })
-        .map(|(min, max)| {
-            let invalids = generate_invalid_numbers(min, max, part1);
-            invalids.iter().sum::<usize>()
-        })
-        .sum::<usize>();
-
-    Some(range_sum)
+    Some(
+        input
+            .split(',')
+            .par_bridge()
+            .map(|r| r.split_once('-').unwrap())
+            .map(|(a, b)| {
+                (
+                    parse::<usize>(a.trim().as_bytes()).unwrap(),
+                    parse::<usize>(b.trim().as_bytes()).unwrap(),
+                )
+            })
+            .map(|(min, max)| {
+                let invalids = if part1 {
+                    generate_invalid_numbers_part1(min, max)
+                } else {
+                    generate_invalid_numbers_part2(min, max)
+                };
+                invalids.iter().sum::<usize>()
+            })
+            .sum::<usize>(),
+    )
 }
 
 pub fn part_one(input: &str) -> Option<usize> {

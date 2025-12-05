@@ -27,19 +27,19 @@ impl Grid {
                 line.trim().as_bytes().iter().map(|&b| match b {
                     b'@' => TileType::Paper,
                     b'.' => TileType::Empty,
-                    _ => panic!("Invalid character in input: {}", b as char),
+                    _ => unreachable!("Invalid character in input: {}", b as char),
                 })
             })
             .collect();
 
-        Grid {
+        Self {
             width,
             height,
             tiles,
         }
     }
 
-    fn get_tile(&self, coord: &Coord) -> Option<&TileType> {
+    fn get_tile(&self, coord: Coord) -> Option<&TileType> {
         if (coord.x() as usize) < self.width && (coord.y() as usize) < self.height {
             Some(&self.tiles[coord.y() as usize * self.width + coord.x() as usize])
         } else {
@@ -53,15 +53,15 @@ impl Grid {
         Coord::new(x, y)
     }
 
-    fn coord_to_index(&self, coord: &Coord) -> usize {
+    fn coord_to_index(&self, coord: Coord) -> usize {
         coord.y() as usize * self.width + coord.x() as usize
     }
 
-    fn count_neighbors_with_paper(&self, coord: &Coord) -> usize {
+    fn count_neighbors_with_paper(&self, coord: Coord) -> usize {
         coord
             .neighbors()
             .iter()
-            .filter(|neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
+            .filter(|&&neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
             .count()
     }
 
@@ -72,7 +72,7 @@ impl Grid {
                 .enumerate()
                 .filter(|(_, tile)| matches!(tile, TileType::Paper))
                 .map(|(i, _)| self.index_to_coord(i))
-                .map(|coord| (coord, self.count_neighbors_with_paper(&coord)))
+                .map(|coord| (coord, self.count_neighbors_with_paper(coord)))
                 .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
                 .count(),
         )
@@ -88,26 +88,26 @@ impl Grid {
                 .enumerate()
                 .filter(|(_, tile)| matches!(tile, TileType::Paper))
                 .map(|(i, _)| self.index_to_coord(i))
-                .map(|coord| (coord, self.count_neighbors_with_paper(&coord)))
+                .map(|coord| (coord, self.count_neighbors_with_paper(coord)))
                 .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
                 .map(|(coord, _)| coord),
         );
 
         // ANIMATE: animate removal passes
         while let Some(coord) = q.pop_front() {
-            if !matches!(self.get_tile(&coord), Some(TileType::Paper)) {
+            if !matches!(self.get_tile(coord), Some(TileType::Paper)) {
                 continue;
             }
 
-            self.remove_paper(&coord);
+            self.remove_paper(coord);
             removed_count += 1;
 
             q.extend(
                 coord
                     .neighbors()
                     .iter()
-                    .filter(|neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
-                    .map(|n| (n, self.count_neighbors_with_paper(n)))
+                    .filter(|&&neighbor| matches!(self.get_tile(neighbor), Some(TileType::Paper)))
+                    .map(|n| (n, self.count_neighbors_with_paper(*n)))
                     .filter(|&(_, count)| count < MOVEABLE_PAPER_LIMIT)
                     .map(|(neighbor, _)| neighbor),
             );
@@ -116,9 +116,14 @@ impl Grid {
         Some(removed_count)
     }
 
-    fn remove_paper(&mut self, coord: &Coord) {
+    fn remove_paper(&mut self, coord: Coord) -> usize {
         let index = self.coord_to_index(coord);
-        self.tiles[index] = TileType::Empty;
+        if !matches!(self.get_tile(coord), Some(TileType::Paper)) {
+            0
+        } else {
+            self.tiles[index] = TileType::Empty;
+            1
+        }
     }
 }
 
