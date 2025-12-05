@@ -1,50 +1,63 @@
 advent_of_code::solution!(2);
 
+use std::ops::RangeInclusive;
+
 use atoi_simd::parse;
 use hashbrown::HashSet;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-fn construct_repetitive(seed: usize, repetitions: usize, seed_len: u32) -> usize {
-    let mut result = seed;
+fn construct_repetitive_update(
+    start_seed: usize,
+    end_seed: usize,
+    repetitions: usize,
+    seed_len: u32,
+    range: &RangeInclusive<usize>,
+    invalid_numbers: &mut HashSet<usize>,
+) {
     let multiplier = 10_usize.pow(seed_len);
 
-    for _ in 1..repetitions {
-        result = result * multiplier + seed;
-    }
+    for seed in start_seed..=end_seed {
+        let mut result = 0;
+        for _ in 0..repetitions {
+            result = result * multiplier + seed;
+        }
 
-    result
+        if range.contains(&result) {
+            invalid_numbers.insert(result);
+        }
+    }
 }
 
-fn generate_invalid_numbers_part1(min: usize, max: usize) -> HashSet<usize> {
+fn generate_invalid_numbers_part1(min: usize, max: usize) -> usize {
     let mut invalid_numbers = HashSet::new();
 
+    let range: RangeInclusive<_> = min..=max;
     // calculate digit lengths
     let min_len = min.ilog10() + 1;
     let max_len = max.ilog10() + 1;
 
     for total_len in min_len..=max_len {
-        let seed_lengths: Vec<u32> = vec![total_len / 2];
+        let seed_len = total_len / 2;
 
-        for seed_len in seed_lengths {
-            let repetitions = 2;
+        let start_seed = 10_usize.pow(seed_len - 1);
+        let end_seed = 10_usize.pow(seed_len) - 1;
 
-            let start_seed = 10_usize.pow(seed_len - 1);
-            let end_seed = 10_usize.pow(seed_len) - 1;
-
-            for seed in start_seed..=end_seed {
-                let candidate = construct_repetitive(seed, repetitions, seed_len);
-
-                if candidate >= min && candidate <= max {
-                    invalid_numbers.insert(candidate);
-                }
-            }
-        }
+        construct_repetitive_update(
+            start_seed,
+            end_seed,
+            2,
+            seed_len,
+            &range,
+            &mut invalid_numbers,
+        );
     }
 
-    invalid_numbers
+    invalid_numbers.iter().sum()
 }
-fn generate_invalid_numbers_part2(min: usize, max: usize) -> HashSet<usize> {
+fn generate_invalid_numbers_part2(min: usize, max: usize) -> usize {
     let mut invalid_numbers = HashSet::new();
+
+    let range: RangeInclusive<_> = min..=max;
 
     // calculate digit lengths
     let min_len = min.ilog10() + 1;
@@ -61,49 +74,49 @@ fn generate_invalid_numbers_part2(min: usize, max: usize) -> HashSet<usize> {
             let start_seed = 10_usize.pow(seed_len - 1);
             let end_seed = 10_usize.pow(seed_len) - 1;
 
-            for seed in start_seed..=end_seed {
-                let candidate = construct_repetitive(seed, repetitions, seed_len);
-
-                if candidate >= min && candidate <= max {
-                    invalid_numbers.insert(candidate);
-                }
-            }
+            construct_repetitive_update(
+                start_seed,
+                end_seed,
+                repetitions,
+                seed_len,
+                &range,
+                &mut invalid_numbers,
+            );
         }
     }
 
-    invalid_numbers
+    invalid_numbers.iter().sum()
 }
 
-fn solve(input: &str, part1: bool) -> Option<usize> {
+pub fn parse_to_range((a, b): (&str, &str)) -> (usize, usize) {
+    (
+        parse(a.trim().as_bytes()).unwrap(),
+        parse(b.trim().as_bytes()).unwrap(),
+    )
+}
+
+pub fn part_one(input: &str) -> Option<usize> {
     Some(
         input
             .split(',')
             .par_bridge()
             .map(|r| r.split_once('-').unwrap())
-            .map(|(a, b)| {
-                (
-                    parse::<usize>(a.trim().as_bytes()).unwrap(),
-                    parse::<usize>(b.trim().as_bytes()).unwrap(),
-                )
-            })
-            .map(|(min, max)| {
-                let invalids = if part1 {
-                    generate_invalid_numbers_part1(min, max)
-                } else {
-                    generate_invalid_numbers_part2(min, max)
-                };
-                invalids.iter().sum::<usize>()
-            })
+            .map(parse_to_range)
+            .map(|(min, max)| generate_invalid_numbers_part1(min, max))
             .sum::<usize>(),
     )
 }
 
-pub fn part_one(input: &str) -> Option<usize> {
-    solve(input, true)
-}
-
 pub fn part_two(input: &str) -> Option<usize> {
-    solve(input, false)
+    Some(
+        input
+            .split(',')
+            .par_bridge()
+            .map(|r| r.split_once('-').unwrap())
+            .map(parse_to_range)
+            .map(|(min, max)| generate_invalid_numbers_part2(min, max))
+            .sum::<usize>(),
+    )
 }
 
 #[cfg(test)]
