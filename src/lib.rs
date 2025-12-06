@@ -1,6 +1,5 @@
 pub mod template;
 
-// Use this file to add helper functions and additional modules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Coord(i32, i32);
 
