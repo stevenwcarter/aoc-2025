@@ -5,27 +5,42 @@ pub mod template;
 pub struct Coord(i32, i32);
 
 impl Coord {
+    /// Create a new coordinate given x and y values
     pub fn new(x: i32, y: i32) -> Self {
         Coord(x, y)
     }
+
+    /// Returns x portion of coordinate
     pub fn x(&self) -> i32 {
         self.0
     }
+
+    /// Returns y portion of coordinate
     pub fn y(&self) -> i32 {
         self.1
     }
+
+    /// Return a new coordinate, shifted up
     pub fn up(&self) -> Self {
         Coord(self.0, self.1 - 1)
     }
+
+    /// Return a new coordinate, shifted down
     pub fn down(&self) -> Self {
         Coord(self.0, self.1 + 1)
     }
+
+    /// Return a new coordinate, shifted to the left
     pub fn left(&self) -> Self {
         Coord(self.0 - 1, self.1)
     }
+
+    /// Return a new coordinate, shifted to the right
     pub fn right(&self) -> Self {
         Coord(self.0 + 1, self.1)
     }
+
+    /// Get all 8 neighboring coordinates
     pub fn neighbors(&self) -> [Self; 8] {
         [
             self.up(),
@@ -39,6 +54,7 @@ impl Coord {
         ]
     }
 }
+
 impl<T: Into<i32>> From<(T, T)> for Coord {
     fn from(tuple: (T, T)) -> Self {
         Coord(tuple.0.into(), tuple.1.into())
