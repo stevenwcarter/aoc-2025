@@ -10,15 +10,20 @@ fn add_reducer(acc: usize, num: usize) -> usize {
     acc + num
 }
 
-fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
-    let operand = chars.last().unwrap()[range.start];
-
-    let math_fn = match operand {
+fn reducer(operand: char) -> impl Fn(usize, usize) -> usize {
+    match operand {
         '*' => mult_reducer,
         '+' => add_reducer,
         _ => unreachable!("Unknown symbol {}", operand),
-    };
+    }
+}
 
+fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
+    let operand = chars.last().unwrap()[range.start];
+
+    let reducer_fn = reducer(operand);
+
+    // for part 1, sum numbers in each row
     chars[0..chars.len() - 1]
         .iter()
         .map(|c| {
@@ -30,18 +35,15 @@ fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
                 })
                 .fold(0usize, |acc, digit| acc * 10 + digit as usize)
         })
-        .fold(0usize, math_fn)
+        .fold(0usize, reducer_fn)
 }
 
 fn calculate_part2(chars: &[Vec<char>], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
-    let math_fn = match operand {
-        '*' => mult_reducer,
-        '+' => add_reducer,
-        _ => unreachable!("Unknown symbol {}", operand),
-    };
+    let reducer_fn = reducer(operand);
 
+    // for part 2, sum numbers in each column
     range
         .rev()
         .map(|i| {
@@ -53,9 +55,10 @@ fn calculate_part2(chars: &[Vec<char>], range: Range<usize>) -> usize {
                 })
                 .fold(0usize, |acc, d| acc * 10 + d as usize)
         })
-        .fold(0usize, math_fn)
+        .fold(0usize, reducer_fn)
 }
 
+// lots of allocation, but it runs fast and is easy to reason about
 fn parse_chars_and_operands(input: &str) -> (Vec<Vec<char>>, Vec<Range<usize>>) {
     let chars: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
     let operands = chars.last().unwrap();
