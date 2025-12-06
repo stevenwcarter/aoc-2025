@@ -18,7 +18,7 @@ fn reducer(operand: u8) -> impl Fn(usize, usize) -> usize {
     }
 }
 
-fn calculate_part1(chars: &[Vec<u8>], range: Range<usize>) -> usize {
+fn calculate_part1(chars: &[&[u8]], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
     let reducer_fn = reducer(operand);
@@ -38,7 +38,7 @@ fn calculate_part1(chars: &[Vec<u8>], range: Range<usize>) -> usize {
         .fold(0usize, reducer_fn)
 }
 
-fn calculate_part2(chars: &[Vec<u8>], range: Range<usize>) -> usize {
+fn calculate_part2(chars: &[&[u8]], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
     let reducer_fn = reducer(operand);
@@ -59,8 +59,8 @@ fn calculate_part2(chars: &[Vec<u8>], range: Range<usize>) -> usize {
 }
 
 // lots of allocation, but it runs fast and is easy to reason about
-fn parse_chars_and_operands(input: &str) -> (Vec<Vec<u8>>, Vec<Range<usize>>) {
-    let chars: Vec<Vec<u8>> = input.lines().map(|l| l.as_bytes().to_vec()).collect();
+fn parse_chars_and_operands(input: &str) -> (Vec<&[u8]>, Vec<Range<usize>>) {
+    let chars: Vec<&[u8]> = input.lines().map(|l| l.as_bytes()).collect();
     let operands = chars.last().unwrap();
 
     let mut operand_ranges: Vec<Range<usize>> = Vec::new();
