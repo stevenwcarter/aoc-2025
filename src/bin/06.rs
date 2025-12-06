@@ -20,8 +20,7 @@ fn reducer(operand: u8) -> (usize, impl Fn(usize, usize) -> usize) {
 }
 
 fn calculate_part1(chars: &[&[u8]], range: Range<usize>) -> usize {
-    // safety: assumes valid input
-    let operand = unsafe { chars.last().unwrap_unchecked()[range.start] };
+    let operand = chars.last().unwrap()[range.start];
 
     let (acc, reducer_fn) = reducer(operand);
 
@@ -41,8 +40,7 @@ fn calculate_part1(chars: &[&[u8]], range: Range<usize>) -> usize {
 }
 
 fn calculate_part2(chars: &[&[u8]], range: Range<usize>) -> usize {
-    // Safety: assumes valid input
-    let operand = unsafe { chars.last().unwrap_unchecked()[range.start] };
+    let operand = chars.last().unwrap()[range.start];
 
     let (acc, reducer_fn) = reducer(operand);
 
@@ -62,11 +60,7 @@ fn calculate_part2(chars: &[&[u8]], range: Range<usize>) -> usize {
 }
 
 // lots of allocation, but it runs fast and is easy to reason about
-fn parse_chars_and_operands(input: &str) -> (Vec<&[u8]>, Vec<Range<usize>>) {
-    let chars: Vec<&[u8]> = input.lines().map(|l| l.as_bytes()).collect();
-    // Safety: assumes valid input
-    let operands = unsafe { chars.last().unwrap_unchecked() };
-
+fn parse_operand_ranges(operands: &[u8]) -> Vec<Range<usize>> {
     let mut operand_ranges: Vec<Range<usize>> = Vec::new();
 
     let mut start = 0;
@@ -79,13 +73,15 @@ fn parse_chars_and_operands(input: &str) -> (Vec<&[u8]>, Vec<Range<usize>>) {
             _ => {}
         }
     }
+    // push the last range
     operand_ranges.push(start..operands.len());
 
-    (chars, operand_ranges)
+    operand_ranges
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let (chars, operand_ranges) = parse_chars_and_operands(input);
+    let chars: Vec<&[u8]> = input.lines().map(|l| l.as_bytes()).collect();
+    let operand_ranges = parse_operand_ranges(chars.last().unwrap());
 
     Some(
         operand_ranges
@@ -96,7 +92,8 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    let (chars, operand_ranges) = parse_chars_and_operands(input);
+    let chars: Vec<&[u8]> = input.lines().map(|l| l.as_bytes()).collect();
+    let operand_ranges = parse_operand_ranges(chars.last().unwrap());
 
     Some(
         operand_ranges
