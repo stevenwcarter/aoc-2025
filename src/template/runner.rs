@@ -59,28 +59,23 @@ fn bench<I: Copy, T>(func: impl Fn(I) -> T, input: I, base_time: &Duration) -> (
     let bench_iterations =
         (Duration::from_secs(1).as_nanos() / cmp::max(base_time.as_nanos(), 10)).clamp(10, 10000);
 
-    let mut timers: Vec<Duration> = vec![];
-
+    let mut count = 0;
+    let timer = Instant::now();
     for _ in 0..bench_iterations {
-        let timer = Instant::now();
         black_box(func(black_box(input)));
-        timers.push(timer.elapsed());
+        count += 1;
     }
 
-    (
-        #[allow(clippy::cast_possible_truncation)]
-        Duration::from_nanos(average_duration(&timers) as u64),
-        bench_iterations,
-    )
+    (timer.elapsed().div_f64(count as f64), bench_iterations)
 }
 
-fn average_duration(numbers: &[Duration]) -> u128 {
-    numbers
-        .iter()
-        .map(std::time::Duration::as_nanos)
-        .sum::<u128>()
-        / numbers.len() as u128
-}
+// fn average_duration(numbers: &[Duration]) -> u128 {
+//     numbers
+//         .iter()
+//         .map(std::time::Duration::as_nanos)
+//         .sum::<u128>()
+//         / numbers.len() as u128
+// }
 
 fn format_duration(duration: &Duration, samples: u128) -> String {
     if samples == 1 {
