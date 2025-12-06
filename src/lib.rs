@@ -10,36 +10,43 @@ impl Coord {
     }
 
     /// Returns x portion of coordinate
+    #[inline]
     pub fn x(&self) -> i32 {
         self.0
     }
 
     /// Returns y portion of coordinate
+    #[inline]
     pub fn y(&self) -> i32 {
         self.1
     }
 
     /// Return a new coordinate, shifted up
+    #[inline]
     pub fn up(&self) -> Self {
         Coord(self.0, self.1 - 1)
     }
 
     /// Return a new coordinate, shifted down
+    #[inline]
     pub fn down(&self) -> Self {
         Coord(self.0, self.1 + 1)
     }
 
     /// Return a new coordinate, shifted to the left
+    #[inline]
     pub fn left(&self) -> Self {
         Coord(self.0 - 1, self.1)
     }
 
     /// Return a new coordinate, shifted to the right
+    #[inline]
     pub fn right(&self) -> Self {
         Coord(self.0 + 1, self.1)
     }
 
     /// Get all 8 neighboring coordinates
+    #[inline]
     pub fn neighbors(&self) -> [Self; 8] {
         [
             self.up(),

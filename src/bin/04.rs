@@ -39,6 +39,7 @@ impl Grid {
         }
     }
 
+    #[inline]
     fn get_tile(&self, coord: Coord) -> Option<&TileType> {
         if (coord.x() as usize) < self.width && (coord.y() as usize) < self.height {
             Some(&self.tiles[coord.y() as usize * self.width + coord.x() as usize])
@@ -47,6 +48,7 @@ impl Grid {
         }
     }
 
+    #[inline]
     fn index_to_coord(&self, index: usize) -> Coord {
         let x = (index % self.width) as i32;
         let y = (index / self.width) as i32;
@@ -95,11 +97,12 @@ impl Grid {
 
         // ANIMATE: animate removal passes
         while let Some(coord) = q.pop_front() {
-            if !matches!(self.get_tile(coord), Some(TileType::Paper)) {
+            let tile_index = self.coord_to_index(coord);
+            if !matches!(self.tiles[tile_index], TileType::Paper) {
                 continue;
             }
 
-            self.remove_paper(coord);
+            self.tiles[tile_index] = TileType::Empty;
             removed_count += 1;
 
             q.extend(
@@ -114,16 +117,6 @@ impl Grid {
         }
 
         Some(removed_count)
-    }
-
-    fn remove_paper(&mut self, coord: Coord) -> usize {
-        let index = self.coord_to_index(coord);
-        if !matches!(self.get_tile(coord), Some(TileType::Paper)) {
-            0
-        } else {
-            self.tiles[index] = TileType::Empty;
-            1
-        }
     }
 }
 
