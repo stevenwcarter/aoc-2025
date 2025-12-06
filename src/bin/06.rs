@@ -1,40 +1,102 @@
-use atoi_simd::parse;
-use hashbrown::HashMap;
+use std::ops::Range;
 
 advent_of_code::solution!(6);
 
-fn solve_problem(problem: &[&str]) -> usize {
-    let symbol_str = problem.last().unwrap();
-    let math_fn = match *symbol_str {
-        "*" => |mut acc, n| {
-            acc = if acc == 0 { n } else { acc * n };
-            acc
-        },
-        "+" => |acc, n| acc + n,
-        _ => unreachable!("Unknown symbol {}", symbol_str),
+fn mult_reducer(acc: usize, num: usize) -> usize {
+    if acc == 0 { num } else { acc * num }
+}
+
+fn add_reducer(acc: usize, num: usize) -> usize {
+    acc + num
+}
+
+fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
+    let operand = chars.last().unwrap()[range.start];
+
+    let math_fn = match operand {
+        '*' => mult_reducer,
+        '+' => add_reducer,
+        _ => unreachable!("Unknown symbol {}", operand),
     };
 
-    problem[0..problem.len() - 1]
+    chars[0..chars.len() - 1]
         .iter()
-        .fold(0usize, |acc, problem| {
-            math_fn(acc, parse(problem.as_bytes()).unwrap())
+        .map(|c| {
+            c[range.clone()]
+                .iter()
+                .filter_map(|&c| match c {
+                    '0'..='9' => Some((c as u8) - b'0'),
+                    _ => None,
+                })
+                .fold(0usize, |acc, digit| acc * 10 + digit as usize)
         })
+        .fold(0usize, math_fn)
+}
+
+fn calculate_part2(chars: &[Vec<char>], range: Range<usize>) -> usize {
+    let operand = chars.last().unwrap()[range.start];
+
+    let math_fn = match operand {
+        '*' => mult_reducer,
+        '+' => add_reducer,
+        _ => unreachable!("Unknown symbol {}", operand),
+    };
+
+    range
+        .rev()
+        .map(|i| {
+            chars[0..chars.len() - 1]
+                .iter()
+                .filter_map(|line| match line[i] {
+                    '0'..='9' => Some(line[i] as u8 - b'0'),
+                    _ => None,
+                })
+                .fold(0usize, |acc, d| acc * 10 + d as usize)
+        })
+        .fold(0usize, math_fn)
+}
+
+fn parse_chars_and_operands(input: &str) -> (Vec<Vec<char>>, Vec<Range<usize>>) {
+    let chars: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
+    let operands = chars.last().unwrap();
+
+    let mut operand_ranges: Vec<Range<usize>> = Vec::new();
+
+    let mut start = 0;
+    for (i, c) in operands[1..].iter().enumerate() {
+        match c {
+            '+' | '*' => {
+                operand_ranges.push(start..i);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    operand_ranges.push(start..operands.len());
+
+    (chars, operand_ranges)
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let mut problems: HashMap<usize, Vec<&str>> = HashMap::new();
-    input.lines().for_each(|l| {
-        l.split_whitespace().enumerate().for_each(|(i, col)| {
-            problems.entry(i).or_default().push(col);
-        });
-    });
+    let (chars, operand_ranges) = parse_chars_and_operands(input);
 
-    Some(problems.values().map(|p| solve_problem(p)).sum())
+    Some(
+        operand_ranges
+            .iter()
+            .map(|r| calculate_part1(&chars, r.clone()))
+            .sum(),
+    )
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    let mut chars: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
-    let operands = chars.last().unwrap();
+    let (chars, operand_ranges) = parse_chars_and_operands(input);
+
+    Some(
+        operand_ranges
+            .iter()
+            .map(|r| calculate_part2(&chars, r.clone()))
+            .sum(),
+    )
 }
 
 #[cfg(test)]
