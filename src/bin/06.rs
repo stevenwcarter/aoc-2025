@@ -10,15 +10,15 @@ fn add_reducer(acc: usize, num: usize) -> usize {
     acc + num
 }
 
-fn reducer(operand: char) -> impl Fn(usize, usize) -> usize {
+fn reducer(operand: u8) -> impl Fn(usize, usize) -> usize {
     match operand {
-        '*' => mult_reducer,
-        '+' => add_reducer,
+        b'*' => mult_reducer,
+        b'+' => add_reducer,
         _ => unreachable!("Unknown symbol {}", operand),
     }
 }
 
-fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
+fn calculate_part1(chars: &[Vec<u8>], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
     let reducer_fn = reducer(operand);
@@ -30,7 +30,7 @@ fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
             c[range.clone()]
                 .iter()
                 .filter_map(|&c| match c {
-                    '0'..='9' => Some((c as u8) - b'0'),
+                    b'0'..=b'9' => Some(c - b'0'),
                     _ => None,
                 })
                 .fold(0usize, |acc, digit| acc * 10 + digit as usize)
@@ -38,7 +38,7 @@ fn calculate_part1(chars: &[Vec<char>], range: Range<usize>) -> usize {
         .fold(0usize, reducer_fn)
 }
 
-fn calculate_part2(chars: &[Vec<char>], range: Range<usize>) -> usize {
+fn calculate_part2(chars: &[Vec<u8>], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
     let reducer_fn = reducer(operand);
@@ -50,7 +50,7 @@ fn calculate_part2(chars: &[Vec<char>], range: Range<usize>) -> usize {
             chars[0..chars.len() - 1]
                 .iter()
                 .filter_map(|line| match line[i] {
-                    '0'..='9' => Some(line[i] as u8 - b'0'),
+                    b'0'..=b'9' => Some(line[i] - b'0'),
                     _ => None,
                 })
                 .fold(0usize, |acc, d| acc * 10 + d as usize)
@@ -59,8 +59,8 @@ fn calculate_part2(chars: &[Vec<char>], range: Range<usize>) -> usize {
 }
 
 // lots of allocation, but it runs fast and is easy to reason about
-fn parse_chars_and_operands(input: &str) -> (Vec<Vec<char>>, Vec<Range<usize>>) {
-    let chars: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
+fn parse_chars_and_operands(input: &str) -> (Vec<Vec<u8>>, Vec<Range<usize>>) {
+    let chars: Vec<Vec<u8>> = input.lines().map(|l| l.as_bytes().to_vec()).collect();
     let operands = chars.last().unwrap();
 
     let mut operand_ranges: Vec<Range<usize>> = Vec::new();
@@ -68,7 +68,7 @@ fn parse_chars_and_operands(input: &str) -> (Vec<Vec<char>>, Vec<Range<usize>>) 
     let mut start = 0;
     for (i, c) in operands[1..].iter().enumerate() {
         match c {
-            '+' | '*' => {
+            b'+' | b'*' => {
                 operand_ranges.push(start..i);
                 start = i + 1;
             }
