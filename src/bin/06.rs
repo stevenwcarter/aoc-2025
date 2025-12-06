@@ -59,33 +59,43 @@ fn calculate_part2(chars: &[&[u8]], range: Range<usize>) -> usize {
         .fold(acc, reducer_fn)
 }
 
-// lots of allocation, but it runs fast and is easy to reason about
-fn parse_operand_ranges(operands: &[u8]) -> Vec<Range<usize>> {
-    let mut operand_ranges: Vec<Range<usize>> = Vec::new();
-
+// iterator to avoid allocating a vec of ranges
+fn operand_ranges_iter(operands: &[u8]) -> impl Iterator<Item = Range<usize>> + '_ {
     let mut start = 0;
-    for (i, c) in operands[1..].iter().enumerate() {
-        match c {
-            b'+' | b'*' => {
-                operand_ranges.push(start..i);
-                start = i + 1;
-            }
-            _ => {}
-        }
-    }
-    // push the last range
-    operand_ranges.push(start..operands.len());
+    let mut cursor = 1;
+    let mut finished = false;
 
-    operand_ranges
+    std::iter::from_fn(move || {
+        if finished {
+            return None;
+        }
+
+        while cursor < operands.len() {
+            if matches!(operands[cursor], b'+' | b'*') {
+                // there's a one space gap between sections before the operator
+                let range = start..cursor - 1;
+                start = cursor;
+                cursor += 1;
+                return Some(range);
+            }
+
+            cursor += 1;
+        }
+
+        finished = true;
+        if start <= operands.len() {
+            Some(start..operands.len())
+        } else {
+            None
+        }
+    })
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
     let chars: Vec<&[u8]> = input.lines().map(|l| l.as_bytes()).collect();
-    let operand_ranges = parse_operand_ranges(chars.last().unwrap());
 
     Some(
-        operand_ranges
-            .iter()
+        operand_ranges_iter(chars.last().unwrap())
             .map(|r| calculate_part1(&chars, r.clone()))
             .sum(),
     )
@@ -93,11 +103,9 @@ pub fn part_one(input: &str) -> Option<usize> {
 
 pub fn part_two(input: &str) -> Option<usize> {
     let chars: Vec<&[u8]> = input.lines().map(|l| l.as_bytes()).collect();
-    let operand_ranges = parse_operand_ranges(chars.last().unwrap());
 
     Some(
-        operand_ranges
-            .iter()
+        operand_ranges_iter(chars.last().unwrap())
             .map(|r| calculate_part2(&chars, r.clone()))
             .sum(),
     )
