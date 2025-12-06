@@ -3,17 +3,18 @@ use std::ops::Range;
 advent_of_code::solution!(6);
 
 fn mult_reducer(acc: usize, num: usize) -> usize {
-    if acc == 0 { num } else { acc * num }
+    acc * num
 }
 
 fn add_reducer(acc: usize, num: usize) -> usize {
     acc + num
 }
 
-fn reducer(operand: u8) -> impl Fn(usize, usize) -> usize {
+fn reducer(operand: u8) -> (usize, impl Fn(usize, usize) -> usize) {
     match operand {
-        b'*' => mult_reducer,
-        b'+' => add_reducer,
+        // accumulator needs to start as 1 for multiplication case
+        b'*' => (1, mult_reducer as fn(usize, usize) -> usize),
+        b'+' => (0, add_reducer as fn(usize, usize) -> usize),
         _ => unreachable!("Unknown symbol {}", operand),
     }
 }
@@ -21,7 +22,7 @@ fn reducer(operand: u8) -> impl Fn(usize, usize) -> usize {
 fn calculate_part1(chars: &[&[u8]], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
-    let reducer_fn = reducer(operand);
+    let (acc, reducer_fn) = reducer(operand);
 
     // for part 1, sum numbers in each row
     chars[0..chars.len() - 1]
@@ -35,13 +36,13 @@ fn calculate_part1(chars: &[&[u8]], range: Range<usize>) -> usize {
                 })
                 .fold(0usize, |acc, digit| acc * 10 + digit as usize)
         })
-        .fold(0usize, reducer_fn)
+        .fold(acc, reducer_fn)
 }
 
 fn calculate_part2(chars: &[&[u8]], range: Range<usize>) -> usize {
     let operand = chars.last().unwrap()[range.start];
 
-    let reducer_fn = reducer(operand);
+    let (acc, reducer_fn) = reducer(operand);
 
     // for part 2, sum numbers in each column
     range
@@ -55,7 +56,7 @@ fn calculate_part2(chars: &[&[u8]], range: Range<usize>) -> usize {
                 })
                 .fold(0usize, |acc, d| acc * 10 + d as usize)
         })
-        .fold(0usize, reducer_fn)
+        .fold(acc, reducer_fn)
 }
 
 // lots of allocation, but it runs fast and is easy to reason about
