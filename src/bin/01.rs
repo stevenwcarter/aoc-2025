@@ -2,13 +2,13 @@ use atoi_simd::parse;
 
 advent_of_code::solution!(1);
 
-const DIAL_START: i64 = 50;
-const SPOT_COUNT: i64 = 100;
+const DIAL_START: i16 = 50;
+const SPOT_COUNT: i16 = 100;
 
 pub struct Dial {
-    dial: i64,
-    part1_zeroes: u64,
-    part2_zeroes: u64,
+    dial: i16,
+    part1_zeroes: u16,
+    part2_zeroes: u16,
 }
 
 impl Default for Dial {
@@ -21,67 +21,84 @@ impl Default for Dial {
     }
 }
 
+#[inline(always)]
+fn fast_mod_100(n: i16) -> i16 {
+    // I started small with i16, converted to i32 and added 40000 which is beyond what i16 can hold.
+    // This guarantees a positive result for the modulo operation, which is further hinted to the
+    // compiler by converting to u32 before applying the modulo.
+    ((n as i32 + 40000) as u32 % 100) as i16
+}
 impl Dial {
-    #[inline(always)]
-    fn fast_mod_100(n: i64) -> i64 {
-        let mut result = n % SPOT_COUNT;
-        if result < 0 {
-            result += SPOT_COUNT;
-        }
-        result
-    }
-
     /// Receives the amount to shift, already adjusted for direction (negative for left, positive
     /// for right).
-    pub fn handle_instruction_part1(&mut self, amount: i64) {
-        self.dial = Self::fast_mod_100(self.dial + amount);
+    #[inline]
+    pub fn handle_instruction_part1(&mut self, amount: i16) {
+        self.dial = fast_mod_100(self.dial + amount);
 
         // Branchless part 1 increment
-        self.part1_zeroes += (self.dial == 0) as u64;
+        self.part1_zeroes += (self.dial == 0) as u16;
     }
 
-    pub fn handle_instruction_part2(&mut self, amount: i64) {
+    pub fn handle_instruction_part2(&mut self, amount: i16) {
         let steps = amount.abs();
 
         // branchless distance calculation
-        let is_positive = (amount > 0) as i64;
+        let is_positive = (amount > 0) as i16;
         let mut dist_to_first =
             is_positive * (SPOT_COUNT - self.dial) + (1 - is_positive) * self.dial;
-        dist_to_first = Self::fast_mod_100(dist_to_first);
+        dist_to_first = fast_mod_100(dist_to_first);
 
         // If already on zero, have to go a full rotation to "touch" it again
-        dist_to_first += SPOT_COUNT * (dist_to_first == 0) as i64;
+        dist_to_first += SPOT_COUNT * (dist_to_first == 0) as i16;
 
         // Branchless part 2 calculation
-        let crosses_zero = (steps >= dist_to_first) as u64;
-        let additional_crosses = ((steps.saturating_sub(dist_to_first)) / SPOT_COUNT) as u64;
+        let crosses_zero = (steps >= dist_to_first) as u16;
+        let additional_crosses = ((steps - dist_to_first) / SPOT_COUNT) as u16;
         self.part2_zeroes += crosses_zero * (1 + additional_crosses);
 
         // shift the actual dial by the amount
-        self.dial = Self::fast_mod_100(self.dial + amount);
+        self.dial = fast_mod_100(self.dial + amount);
     }
 }
 
-pub fn part_one(input: &str) -> Option<u64> {
+pub fn part_one(input: &str) -> Option<u16> {
     let mut dial = Dial::default();
-    input
-        .lines()
-        .map(|l| l.split_at(1))
-        .map(|(direction, amount)| (direction, parse::<i64>(amount.as_bytes()).unwrap()))
-        .map(|(direction, amount)| if direction == "L" { -amount } else { amount })
-        .for_each(|amount| dial.handle_instruction_part1(amount));
+
+    for line in input.lines() {
+        let bytes = line.as_bytes();
+
+        let mut amount: i16 = 0;
+        for &b in &bytes[1..] {
+            amount = amount * 10 + (b - b'0') as i16;
+        }
+
+        if bytes[0] == b'L' {
+            amount = -amount;
+        }
+
+        dial.handle_instruction_part1(amount);
+    }
 
     Some(dial.part1_zeroes)
 }
 
-pub fn part_two(input: &str) -> Option<u64> {
+pub fn part_two(input: &str) -> Option<u16> {
     let mut dial = Dial::default();
-    input
-        .lines()
-        .map(|l| l.split_at(1)) // R 51 or L 21
-        .map(|(direction, amount)| (direction, parse::<i64>(amount.as_bytes()).unwrap()))
-        .map(|(direction, amount)| if direction == "L" { -amount } else { amount })
-        .for_each(|l| dial.handle_instruction_part2(l));
+
+    for line in input.lines() {
+        let bytes = line.as_bytes();
+
+        let mut amount: i16 = 0;
+        for &b in &bytes[1..] {
+            amount = amount * 10 + (b - b'0') as i16;
+        }
+
+        if bytes[0] == b'L' {
+            amount = -amount;
+        }
+
+        dial.handle_instruction_part2(amount);
+    }
 
     Some(dial.part2_zeroes)
 }
