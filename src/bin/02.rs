@@ -15,16 +15,15 @@ fn construct_repetitive_update(
 ) {
     let multiplier = 10_usize.pow(seed_len);
 
-    for seed in start_seed..=end_seed {
-        let mut result = 0;
-        for _ in 0..repetitions {
-            result = result * multiplier + seed;
-        }
+    invalid_numbers.extend((start_seed..=end_seed).filter_map(|seed| {
+        let result = (0..repetitions).fold(0usize, |acc, _| acc * multiplier + seed);
 
         if range.contains(&result) {
-            invalid_numbers.insert(result);
+            Some(result)
+        } else {
+            None
         }
-    }
+    }));
 }
 
 fn generate_invalid_numbers_part1(min: usize, max: usize) -> usize {
