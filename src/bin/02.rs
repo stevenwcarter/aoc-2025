@@ -63,25 +63,23 @@ fn generate_invalid_numbers_part2(min: usize, max: usize) -> usize {
     let max_len = max.ilog10() + 1;
 
     for total_len in min_len..=max_len {
-        let seed_lengths: Vec<u32> = (1..=total_len / 2)
+        (1..=total_len / 2)
             .filter(|len| total_len % len == 0)
-            .collect();
+            .for_each(|seed_len| {
+                let repetitions = (total_len / seed_len) as usize;
 
-        for seed_len in seed_lengths {
-            let repetitions = (total_len / seed_len) as usize;
+                let start_seed = 10_usize.pow(seed_len - 1);
+                let end_seed = 10_usize.pow(seed_len) - 1;
 
-            let start_seed = 10_usize.pow(seed_len - 1);
-            let end_seed = 10_usize.pow(seed_len) - 1;
-
-            construct_repetitive_update(
-                start_seed,
-                end_seed,
-                repetitions,
-                seed_len,
-                &range,
-                &mut invalid_numbers,
-            );
-        }
+                construct_repetitive_update(
+                    start_seed,
+                    end_seed,
+                    repetitions,
+                    seed_len,
+                    &range,
+                    &mut invalid_numbers,
+                );
+            });
     }
 
     invalid_numbers.iter().sum()
