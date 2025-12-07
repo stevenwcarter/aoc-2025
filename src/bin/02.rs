@@ -2,7 +2,6 @@ advent_of_code::solution!(2);
 
 use std::ops::RangeInclusive;
 
-use atoi_simd::parse;
 use hashbrown::HashSet;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
@@ -54,6 +53,7 @@ fn generate_invalid_numbers_part1(min: usize, max: usize) -> usize {
 
     invalid_numbers.iter().sum()
 }
+
 fn generate_invalid_numbers_part2(min: usize, max: usize) -> usize {
     let mut invalid_numbers = HashSet::new();
 
@@ -65,7 +65,7 @@ fn generate_invalid_numbers_part2(min: usize, max: usize) -> usize {
 
     for total_len in min_len..=max_len {
         let seed_lengths: Vec<u32> = (1..=total_len / 2)
-            .filter(|&len| total_len % len == 0)
+            .filter(|len| total_len % len == 0)
             .collect();
 
         for seed_len in seed_lengths {
@@ -90,8 +90,14 @@ fn generate_invalid_numbers_part2(min: usize, max: usize) -> usize {
 
 pub fn parse_to_range((a, b): (&str, &str)) -> (usize, usize) {
     (
-        parse(a.trim().as_bytes()).unwrap(),
-        parse(b.trim().as_bytes()).unwrap(),
+        a.trim()
+            .as_bytes()
+            .iter()
+            .fold(0usize, |acc, &b| acc * 10 + (b - b'0') as usize),
+        b.trim()
+            .as_bytes()
+            .iter()
+            .fold(0usize, |acc, &b| acc * 10 + (b - b'0') as usize),
     )
 }
 
