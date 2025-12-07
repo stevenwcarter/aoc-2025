@@ -1,6 +1,5 @@
 use advent_of_code::condense_ranges;
 use atoi_simd::parse;
-use itertools::Itertools;
 
 advent_of_code::solution!(5);
 
@@ -29,21 +28,9 @@ fn find_fresh_totals(
     Some(fresh_total as u64)
 }
 
-/// Find total count of fresh ingredients in all ranges, just using simple math after condensing
-/// the ranges to avoid double counting
-fn find_total_fresh_count(ranges: &[(usize, usize)]) -> Option<u64> {
-    let ranges = condense_ranges(ranges);
-    let mut total_fresh = 0u64;
-
-    for (start, end) in ranges {
-        total_fresh += (end - start + 1) as u64;
-    }
-
-    Some(total_fresh)
-}
-
 pub fn part_one(input: &str) -> Option<u64> {
-    let (ranges, ingredients) = input.split("\n\n").collect_tuple().unwrap();
+    let split_index = memchr::memmem::find(input.as_bytes(), b"\n\n")?;
+    let (ranges, ingredients) = input.split_at(split_index);
     let ranges: Vec<(usize, usize)> = ranges
         .lines()
         .map(|range| range.split('-'))
@@ -55,7 +42,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         })
         .collect();
 
-    let ingredients_iter = ingredients
+    let ingredients_iter = ingredients[2..] // Skip the leading double newline
         .lines()
         .map(|ingredient| parse(ingredient.as_bytes()).unwrap());
 
@@ -63,8 +50,9 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let (ranges, _) = input.split("\n\n").collect_tuple().unwrap();
-    let ranges: Vec<(usize, usize)> = ranges
+    // Find the split index with simd for most efficient parsing
+    let split_index = memchr::memmem::find(input.as_bytes(), b"\n\n")?;
+    let ranges: Vec<(usize, usize)> = input[..split_index]
         .lines()
         .map(|range| range.split('-'))
         .map(|mut range| {
@@ -75,7 +63,13 @@ pub fn part_two(input: &str) -> Option<u64> {
         })
         .collect();
 
-    find_total_fresh_count(&ranges)
+    // Find total count of fresh ingredients in all ranges, just using simple math after condensing
+    // the ranges to avoid double counting
+    Some(
+        condense_ranges(&ranges)
+            .iter()
+            .fold(0u64, |acc, &(start, end)| acc + (end - start + 1) as u64),
+    )
 }
 
 #[cfg(test)]
