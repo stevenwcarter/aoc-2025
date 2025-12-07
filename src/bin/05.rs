@@ -4,20 +4,29 @@ use itertools::Itertools;
 
 advent_of_code::solution!(5);
 
-fn find_fresh_totals(ranges: &[(usize, usize)], ingredients: &[usize]) -> Option<u64> {
+fn find_fresh_totals(
+    ranges: &[(usize, usize)],
+    ingredients_iter: impl Iterator<Item = usize>,
+) -> Option<u64> {
+    // Ensure these are sorted by start position and disjoint (non-overlapping)
     let ranges = condense_ranges(ranges);
-    let mut fresh_total = 0u64;
 
-    'ingredient_loop: for &ingredient in ingredients {
-        for (start, end) in &ranges {
-            if ingredient >= *start && ingredient <= *end {
-                fresh_total += 1;
-                continue 'ingredient_loop;
+    let fresh_total = ingredients_iter
+        .filter(|&ingredient| {
+            let idx = ranges.partition_point(|&(start, _)| start <= ingredient);
+
+            // If idx is 0, the ingredient is smaller than the first range's start.
+            if idx == 0 {
+                return false;
             }
-        }
-    }
 
-    Some(fresh_total)
+            // Otherwise, check the range immediately before the partition point.
+            let (_range_start, range_end) = ranges[idx - 1];
+            range_end >= ingredient
+        })
+        .count();
+
+    Some(fresh_total as u64)
 }
 
 /// Find total count of fresh ingredients in all ranges, just using simple math after condensing
@@ -46,12 +55,11 @@ pub fn part_one(input: &str) -> Option<u64> {
         })
         .collect();
 
-    let ingredients: Vec<usize> = ingredients
+    let ingredients_iter = ingredients
         .lines()
-        .map(|ingredient| parse(ingredient.as_bytes()).unwrap())
-        .collect();
+        .map(|ingredient| parse(ingredient.as_bytes()).unwrap());
 
-    find_fresh_totals(&ranges, &ingredients)
+    find_fresh_totals(&ranges, ingredients_iter)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
