@@ -36,6 +36,7 @@ dhat = { version = "0.3.3", optional = true }
 hashbrown = "0.16.1"
 itertools = "0.14.0"
 memchr = "2.7.6"
+nohash = "0.2.0"
 pico-args = "0.5.0"
 rayon = "1.11.0"
 smallvec = { version = "1.15.1", features = ["const_generics"] }
