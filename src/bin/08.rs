@@ -78,7 +78,6 @@ pub fn part_one(input: &str) -> Option<usize> {
             break;
         }
         let combinations = combinations.get(distance).unwrap();
-        dbg!(combinations.len());
         for (a, b) in combinations {
             let id1 = *circuits.get(a).unwrap_or(&0);
             let id2 = *circuits.get(b).unwrap_or(&0);
@@ -154,7 +153,6 @@ pub fn part_two(input: &str) -> Option<usize> {
             break;
         }
         let combinations = combinations.get(distance).unwrap();
-        dbg!(combinations.len());
         for (a, b) in combinations {
             let id1 = *circuits.get(a).unwrap_or(&0);
             let id2 = *circuits.get(b).unwrap_or(&0);
