@@ -47,10 +47,10 @@ impl From<(usize, usize, usize)> for Coord3 {
     }
 }
 
-pub fn part_one(input: &str) -> Option<usize> {
+fn parse_circuits(input: &str) -> HashMap<Coord3, usize> {
     let mut circuit_id = 0;
     let mut circuits: HashMap<Coord3, usize> = HashMap::new();
-    let coords = input
+    input
         .lines()
         .map(|l| {
             Coord3::from(
@@ -60,12 +60,21 @@ pub fn part_one(input: &str) -> Option<usize> {
                     .unwrap(),
             )
         })
-        .collect::<Vec<Coord3>>();
+        .for_each(|v| {
+            circuit_id += 1;
+            circuits.insert(v, circuit_id);
+        });
 
-    let iters = if coords.len() < 100 { 10 } else { 1000 };
+    circuits
+}
+
+pub fn part_one(input: &str) -> Option<usize> {
+    let mut circuits = parse_circuits(input);
+
+    let iters = if circuits.len() < 100 { 10 } else { 1000 };
 
     let mut combinations: BTreeMap<usize, Vec<(Coord3, Coord3)>> = BTreeMap::new();
-    coords.iter().combinations(2).for_each(|v| {
+    circuits.keys().combinations(2).for_each(|v| {
         let c1 = *v[0];
         let c2 = *v[1];
         let dist = c1.distance(&c2);
@@ -81,27 +90,12 @@ pub fn part_one(input: &str) -> Option<usize> {
         for (a, b) in combinations {
             let id1 = *circuits.get(a).unwrap_or(&0);
             let id2 = *circuits.get(b).unwrap_or(&0);
-            match (id1, id2) {
-                (0, 0) => {
-                    circuit_id += 1;
-                    circuits.insert(*a, circuit_id);
-                    circuits.insert(*b, circuit_id);
-                }
-                (0, _) => {
-                    circuits.insert(*a, id2);
-                }
-                (_, 0) => {
-                    circuits.insert(*b, id1);
-                }
-                _ => {
-                    circuits
-                        .iter_mut()
-                        .filter(|(_coord, cid)| **cid == id2)
-                        .for_each(|(_coord, cid)| {
-                            *cid = id1;
-                        });
-                }
-            }
+            circuits
+                .iter_mut()
+                .filter(|(_coord, cid)| **cid == id2)
+                .for_each(|(_coord, cid)| {
+                    *cid = id1;
+                });
             max_count -= 1;
         }
     }
@@ -120,26 +114,10 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    let mut circuit_id = 0;
-    let mut circuits: HashMap<Coord3, usize> = HashMap::new();
-    let coords = input
-        .lines()
-        .map(|l| {
-            Coord3::from(
-                l.split(',')
-                    .map(|c| parse::<usize>(c.trim().as_bytes()).unwrap())
-                    .collect_tuple::<(usize, usize, usize)>()
-                    .unwrap(),
-            )
-        })
-        .inspect(|v| {
-            circuit_id += 1;
-            circuits.insert(*v, circuit_id);
-        })
-        .collect::<Vec<Coord3>>();
+    let mut circuits = parse_circuits(input);
 
     let mut combinations: BTreeMap<usize, Vec<(Coord3, Coord3)>> = BTreeMap::new();
-    coords.iter().combinations(2).for_each(|v| {
+    circuits.keys().combinations(2).for_each(|v| {
         let c1 = *v[0];
         let c2 = *v[1];
         let dist = c1.distance(&c2);
@@ -154,33 +132,18 @@ pub fn part_two(input: &str) -> Option<usize> {
         }
         let combinations = combinations.get(distance).unwrap();
         for (a, b) in combinations {
-            let id1 = *circuits.get(a).unwrap_or(&0);
-            let id2 = *circuits.get(b).unwrap_or(&0);
-            match (id1, id2) {
-                (0, 0) => {
-                    circuit_id += 1;
-                    circuits.insert(*a, circuit_id);
-                    circuits.insert(*b, circuit_id);
-                }
-                (0, _) => {
-                    circuits.insert(*a, id2);
-                }
-                (_, 0) => {
-                    circuits.insert(*b, id1);
-                }
-                _ => {
-                    circuits
-                        .iter_mut()
-                        .filter(|(_coord, cid)| **cid == id2)
-                        .for_each(|(_coord, cid)| {
-                            *cid = id1;
-                        });
-                    if circuits.values().all(|&cid| cid == id1) {
-                        xs = Some((a.x(), b.x()));
-                        result_found = true;
-                        break;
-                    }
-                }
+            let id1 = *circuits.get(a).unwrap();
+            let id2 = *circuits.get(b).unwrap();
+            circuits
+                .iter_mut()
+                .filter(|(_coord, cid)| **cid == id2)
+                .for_each(|(_coord, cid)| {
+                    *cid = id1;
+                });
+            if circuits.values().all(|&cid| cid == id1) {
+                xs = Some((a.x(), b.x()));
+                result_found = true;
+                break;
             }
         }
     }
