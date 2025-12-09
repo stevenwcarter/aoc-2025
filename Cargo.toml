@@ -41,5 +41,6 @@ pico-args = "0.5.0"
 rayon = "1.11.0"
 smallvec = { version = "1.15.1", features = ["const_generics"] }
 tinyjson = "2.5.1"
+union-find = "0.4.3"
 
 # Solution dependencies

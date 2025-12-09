@@ -8,119 +8,153 @@ use nohash::BuildNoHashHasher;
 
 advent_of_code::solution!(8);
 
-fn parse_circuits(input: &str) -> HashMap<Coord3, usize> {
-    let mut circuit_id = 0;
-    let mut circuits: HashMap<Coord3, usize> = HashMap::new();
+struct UnionFind {
+    parent: Vec<usize>,
+    rank: Vec<usize>,
+    size: Vec<usize>,
+}
+
+impl UnionFind {
+    fn new(n: usize) -> Self {
+        Self {
+            parent: (0..n).collect(),
+            rank: vec![0; n],
+            size: vec![1; n],
+        }
+    }
+
+    fn find(&mut self, x: usize) -> usize {
+        if self.parent[x] != x {
+            self.parent[x] = self.find(self.parent[x]); // path compression
+        }
+        self.parent[x]
+    }
+
+    fn union(&mut self, x: usize, y: usize) -> bool {
+        let root_x = self.find(x);
+        let root_y = self.find(y);
+
+        if root_x == root_y {
+            return false; // already connected
+        }
+
+        // union by rank
+        if self.rank[root_x] < self.rank[root_y] {
+            self.parent[root_x] = root_y;
+            self.size[root_y] += self.size[root_x];
+        } else if self.rank[root_x] > self.rank[root_y] {
+            self.parent[root_y] = root_x;
+            self.size[root_x] += self.size[root_y];
+        } else {
+            self.parent[root_y] = root_x;
+            self.size[root_x] += self.size[root_y];
+            self.rank[root_x] += 1;
+        }
+        true
+    }
+
+    fn component_sizes(&mut self) -> Vec<usize> {
+        let mut sizes = Vec::new();
+        for i in 0..self.parent.len() {
+            if self.find(i) == i {
+                sizes.push(self.size[i]);
+            }
+        }
+        sizes
+    }
+
+    fn all_connected(&mut self) -> bool {
+        let root = self.find(0);
+        (1..self.parent.len()).all(|i| self.find(i) == root)
+    }
+}
+
+#[inline(always)]
+fn parse_usize(input: &str) -> usize {
+    parse::<usize>(input.as_bytes()).unwrap()
+}
+
+fn parse_circuits_indexed(input: &str) -> Vec<Coord3> {
     input
         .lines()
         .map(|l| {
             Coord3::from(
                 l.split(',')
-                    .map(|c| parse::<usize>(c.trim().as_bytes()).unwrap())
+                    .map(parse_usize)
                     .collect_tuple::<(usize, usize, usize)>()
                     .unwrap(),
             )
         })
-        .for_each(|v| {
-            circuit_id += 1;
-            circuits.insert(v, circuit_id);
-        });
-
-    circuits
+        .collect()
 }
 
-fn compute_combinations(
-    circuits: &HashMap<Coord3, usize>,
-) -> BTreeMap<usize, Vec<(Coord3, Coord3)>> {
+fn compute_combinations_indexed(circuits: &[Coord3]) -> BTreeMap<u32, Vec<(usize, usize)>> {
     // no hashing to speed up initial insertion
-    let mut combinations: HashMap<usize, Vec<(Coord3, Coord3)>, BuildNoHashHasher<usize>> =
+    let mut combinations: HashMap<u32, Vec<(usize, usize)>, BuildNoHashHasher<u32>> =
         HashMap::with_hasher(BuildNoHashHasher::default());
-    circuits.keys().combinations(2).for_each(|v| {
-        let c1 = *v[0];
-        let c2 = *v[1];
-        let dist = c1.distance(&c2);
-        if dist < 20_000 {
+
+    (0..circuits.len()).combinations(2).for_each(|pair| {
+        let i = pair[0];
+        let j = pair[1];
+        let dist = circuits[i].distance(&circuits[j]);
+        if dist < 15_000 {
             // simple distance cutoff to reduce number of combinations
-            combinations.entry(dist).or_default().push((c1, c2));
+            combinations.entry(dist).or_default().push((i, j));
         }
     });
     // convert back to BTreeMap for ordered keys once at the end, more performant
     combinations.into_iter().collect()
 }
 
+// Connect the first thousand circuits, then return the product of the sizes of the three largest
+// connected graphs
 pub fn part_one(input: &str) -> Option<usize> {
-    let mut circuits = parse_circuits(input);
+    let circuits = parse_circuits_indexed(input);
 
-    let combinations = compute_combinations(&circuits);
+    let combinations = compute_combinations_indexed(&circuits);
 
-    let mut iters = if circuits.len() < 100 { 10 } else { 1000 };
+    let mut uf = UnionFind::new(circuits.len());
+
+    let mut connections = if input.lines().collect_vec().len() < 100 {
+        10
+    } else {
+        1000
+    };
+
     for distance in combinations.keys() {
-        if iters <= 0 {
+        if connections <= 0 {
             break;
         }
-        let combinations = combinations.get(distance).unwrap();
-        for (a, b) in combinations {
-            let id1 = *circuits.get(a).unwrap_or(&0);
-            let id2 = *circuits.get(b).unwrap_or(&0);
-            if id1 == id2 {
-                iters -= 1;
-                continue;
+        let pairs = combinations.get(distance).unwrap();
+        for &(i, j) in pairs {
+            if uf.union(i, j) && connections <= 0 {
+                break;
             }
-            // combine circuits
-            circuits
-                .iter_mut()
-                .filter(|(_coord, cid)| **cid == id2)
-                .for_each(|(_coord, cid)| {
-                    *cid = id1;
-                });
-            iters -= 1;
+            connections -= 1;
         }
     }
 
-    let mut counts: HashMap<usize, usize> = HashMap::new();
-    for cid in circuits.values() {
-        *counts.entry(*cid).or_default() += 1;
-    }
-
-    let mut values: Vec<usize> = counts.values().copied().collect();
-
-    values.sort();
-    values.reverse();
-
-    Some(values[0..3].iter().product())
+    let mut sizes = uf.component_sizes();
+    sizes.sort_by(|a, b| b.cmp(a));
+    Some(sizes[0..3].iter().product())
 }
 
+/// Connect all circuits, then return the product of the x-coordinates of the two last connected
+/// (which caused them all to be connected)
 pub fn part_two(input: &str) -> Option<usize> {
-    let mut circuits = parse_circuits(input);
+    let circuits = parse_circuits_indexed(input);
+    let combinations = compute_combinations_indexed(&circuits);
+    let mut uf = UnionFind::new(circuits.len());
 
-    let combinations = compute_combinations(&circuits);
-
-    let mut xs: Option<(usize, usize)> = None;
-    combinations.keys().any(|distance| {
-        let combinations = combinations.get(distance).unwrap();
-        for (a, b) in combinations {
-            let id1 = *circuits.get(a).unwrap();
-            let id2 = *circuits.get(b).unwrap();
-            if id1 == id2 {
-                // already connected
-                continue;
-            }
-            circuits
-                .iter_mut()
-                .filter(|(_coord, cid)| **cid == id2)
-                .for_each(|(_coord, cid)| {
-                    *cid = id1;
-                });
-            if circuits.values().all(|&cid| cid == id1) {
-                xs = Some((a.x(), b.x()));
-                return true; // short-circuit outer loop (why I used any)
+    for distance in combinations.keys() {
+        let pairs = combinations.get(distance).unwrap();
+        for &(i, j) in pairs {
+            if uf.union(i, j) && uf.all_connected() {
+                return Some(circuits[i].x() * circuits[j].x());
             }
         }
-        false
-    });
-
-    let xs = xs.unwrap();
-    Some(xs.0 * xs.1)
+    }
+    None
 }
 
 #[cfg(test)]

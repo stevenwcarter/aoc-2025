@@ -127,11 +127,11 @@ impl Coord3 {
     #[inline]
     // strangely, keeping the sqrt improves performance
     // TODO: check out what the compiler does here
-    pub fn distance(&self, other: &Coord3) -> usize {
+    pub fn distance(&self, other: &Coord3) -> u32 {
         ((self.x().abs_diff(other.x()).pow(2)
             + self.y().abs_diff(other.y()).pow(2)
             + self.z().abs_diff(other.z()).pow(2)) as f32)
-            .sqrt() as usize
+            .sqrt() as u32
     }
 }
 
