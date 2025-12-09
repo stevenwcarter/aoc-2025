@@ -3,7 +3,7 @@ use std::{
     collections::VecDeque,
 };
 
-use advent_of_code::Coord;
+use advent_of_code::{Coord, Rectangle};
 use atoi_simd::parse_pos;
 use hashbrown::HashSet;
 use itertools::Itertools;
@@ -39,6 +39,7 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
+    let mut answer = 0;
     let coords: Vec<Coord> = input
         .lines()
         .map(|line| {
@@ -49,8 +50,27 @@ pub fn part_two(input: &str) -> Option<usize> {
             ))
         })
         .collect();
+    let edges = coords
+        .iter()
+        .circular_tuple_windows()
+        .map(|(a, b)| Rectangle::new(*a, *b))
+        .collect_vec();
 
-    None
+    for (i, t1) in coords.iter().enumerate() {
+        for t2 in coords[i + 1..].iter() {
+            let area = ((t1.x() - t2.x()).abs() + 1) * ((t1.y() - t2.y()).abs() + 1);
+            let rect = Rectangle::new(*t1, *t2);
+            let inner_rect = Rectangle::new(
+                Coord::from((rect.top_left.x() + 1, rect.top_left.y() + 1)),
+                Coord::from((rect.bottom_right.x() - 1, rect.bottom_right.y() - 1)),
+            );
+            if edges.iter().all(|e| inner_rect.intersection(e).is_none()) {
+                answer = answer.max(area);
+            }
+        }
+    }
+
+    Some(answer as usize)
 }
 
 fn display_grid(grid: &HashSet<(usize, usize)>) {

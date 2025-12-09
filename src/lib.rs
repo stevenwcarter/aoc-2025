@@ -1,3 +1,5 @@
+use std::cmp::{max, min};
+
 pub mod template;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -138,5 +140,72 @@ impl Coord3 {
 impl From<(usize, usize, usize)> for Coord3 {
     fn from(value: (usize, usize, usize)) -> Self {
         Coord3(value.0, value.1, value.2)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct Rectangle {
+    pub top_left: Coord,
+    pub bottom_right: Coord,
+}
+
+impl Rectangle {
+    pub fn area(&self) -> i32 {
+        dbg!(self);
+        let width = self.top_left.x().max(self.bottom_right.x())
+            - self.top_left.x().min(self.bottom_right.x());
+        let height = self.top_left.y().max(self.bottom_right.y())
+            - self.top_left.y().min(self.bottom_right.y());
+        dbg!(self.top_left.y(), self.bottom_right.y());
+        dbg!(width, height, width * height);
+        width * height
+    }
+
+    pub fn new(first: Coord, second: Coord) -> Self {
+        let top_left = Coord::from((first.x().min(second.x()), first.y().min(second.y())));
+        let bottom_right = Coord::from((first.x().max(second.x()), first.y().max(second.y())));
+        Rectangle {
+            top_left,
+            bottom_right,
+        }
+    }
+
+    pub fn contains(&self, point: &Coord) -> bool {
+        point.x() >= self.top_left.x()
+            && point.x() <= self.bottom_right.x()
+            && point.y() >= self.top_left.y()
+            && point.y() <= self.bottom_right.y()
+    }
+
+    pub fn intersection(&self, other: &Self) -> Option<Self> {
+        if self.top_left.x() > other.bottom_right.x()
+            || other.top_left.x() > self.bottom_right.x()
+            || self.top_left.y() > other.bottom_right.y()
+            || other.top_left.y() > self.bottom_right.y()
+        {
+            None
+        } else {
+            Some(Rectangle {
+                top_left: Coord::from((
+                    max(self.top_left.x(), other.top_left.x()),
+                    max(self.top_left.y(), other.top_left.y()),
+                )),
+                bottom_right: Coord::from((
+                    min(self.bottom_right.x(), other.bottom_right.x()),
+                    min(self.bottom_right.y(), other.bottom_right.y()),
+                )),
+            })
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rectangle_area() {
+        let rect = Rectangle::new((0, 0).into(), (10, 10).into());
+        assert_eq!(rect.area(), 100);
     }
 }
