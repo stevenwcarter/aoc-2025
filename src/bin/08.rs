@@ -39,7 +39,10 @@ fn compute_combinations(
         let c1 = *v[0];
         let c2 = *v[1];
         let dist = c1.distance(&c2);
-        combinations.entry(dist).or_default().push((c1, c2));
+        if dist < 20_000 {
+            // simple distance cutoff to reduce number of combinations
+            combinations.entry(dist).or_default().push((c1, c2));
+        }
     });
     // convert back to BTreeMap for ordered keys once at the end, more performant
     combinations.into_iter().collect()
