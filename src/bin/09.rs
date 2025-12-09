@@ -1,8 +1,3 @@
-use std::{
-    cmp::{max, min},
-    collections::VecDeque,
-};
-
 use advent_of_code::{Coord, Rectangle};
 use atoi_simd::parse_pos;
 use hashbrown::HashSet;
@@ -20,16 +15,7 @@ fn find_area(pair: &[&Coord]) -> usize {
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let coords: Vec<Coord> = input
-        .lines()
-        .map(|line| {
-            let (a, b) = line.split_once(',').unwrap();
-            Coord::from((
-                parse_pos::<usize>(a.trim().as_bytes()).unwrap() as i32,
-                parse_pos::<usize>(b.trim().as_bytes()).unwrap() as i32,
-            ))
-        })
-        .collect();
+    let coords = parse_coords(input);
 
     coords
         .iter()
@@ -38,9 +24,8 @@ pub fn part_one(input: &str) -> Option<usize> {
         .max()
 }
 
-pub fn part_two(input: &str) -> Option<usize> {
-    let mut answer = 0;
-    let coords: Vec<Coord> = input
+fn parse_coords(input: &str) -> Vec<Coord> {
+    input
         .lines()
         .map(|line| {
             let (a, b) = line.split_once(',').unwrap();
@@ -49,7 +34,11 @@ pub fn part_two(input: &str) -> Option<usize> {
                 parse_pos::<usize>(b.trim().as_bytes()).unwrap() as i32,
             ))
         })
-        .collect();
+        .collect()
+}
+pub fn part_two(input: &str) -> Option<usize> {
+    let mut answer = 0;
+    let coords = parse_coords(input);
     let edges = coords
         .iter()
         .circular_tuple_windows()
@@ -58,13 +47,10 @@ pub fn part_two(input: &str) -> Option<usize> {
 
     for (i, t1) in coords.iter().enumerate() {
         for t2 in coords[i + 1..].iter() {
-            let area = ((t1.x() - t2.x()).abs() + 1) * ((t1.y() - t2.y()).abs() + 1);
-            let rect = Rectangle::new(*t1, *t2);
-            let inner_rect = Rectangle::new(
-                Coord::from((rect.top_left.x() + 1, rect.top_left.y() + 1)),
-                Coord::from((rect.bottom_right.x() - 1, rect.bottom_right.y() - 1)),
-            );
+            let inner_rect = Rectangle::new(*t1, *t2).inset(1);
+
             if edges.iter().all(|e| inner_rect.intersection(e).is_none()) {
+                let area = ((t1.x() - t2.x()).abs() + 1) * ((t1.y() - t2.y()).abs() + 1);
                 answer = answer.max(area);
             }
         }
@@ -73,6 +59,7 @@ pub fn part_two(input: &str) -> Option<usize> {
     Some(answer as usize)
 }
 
+#[allow(unused)]
 fn display_grid(grid: &HashSet<(usize, usize)>) {
     let min_x = grid.iter().map(|(x, _)| *x).min().unwrap();
     let max_x = grid.iter().map(|(x, _)| *x).max().unwrap();

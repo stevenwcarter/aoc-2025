@@ -197,6 +197,16 @@ impl Rectangle {
             })
         }
     }
+
+    pub fn inset(&self, offset: i32) -> Self {
+        Rectangle::new(
+            Coord::from((self.top_left.x() + offset, self.top_left.y() + offset)),
+            Coord::from((
+                self.bottom_right.x() - offset,
+                self.bottom_right.y() - offset,
+            )),
+        )
+    }
 }
 
 #[cfg(test)]
