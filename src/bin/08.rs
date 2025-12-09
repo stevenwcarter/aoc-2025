@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use atoi_simd::parse;
 use hashbrown::HashMap;
 use itertools::Itertools;
+use nohash::BuildNoHashHasher;
 
 advent_of_code::solution!(8);
 
@@ -33,6 +34,7 @@ impl Coord3 {
         self.2
     }
 
+    #[inline]
     pub fn distance(&self, other: &Coord3) -> usize {
         ((self.x().abs_diff(other.x()).pow(2)
             + self.y().abs_diff(other.y()).pow(2)
@@ -68,35 +70,48 @@ fn parse_circuits(input: &str) -> HashMap<Coord3, usize> {
     circuits
 }
 
-pub fn part_one(input: &str) -> Option<usize> {
-    let mut circuits = parse_circuits(input);
-
-    let iters = if circuits.len() < 100 { 10 } else { 1000 };
-
-    let mut combinations: BTreeMap<usize, Vec<(Coord3, Coord3)>> = BTreeMap::new();
+fn compute_combinations(
+    circuits: &HashMap<Coord3, usize>,
+) -> BTreeMap<usize, Vec<(Coord3, Coord3)>> {
+    // no hashing to speed up initial insertion
+    let mut combinations: HashMap<usize, Vec<(Coord3, Coord3)>, BuildNoHashHasher<usize>> =
+        HashMap::with_hasher(BuildNoHashHasher::default());
     circuits.keys().combinations(2).for_each(|v| {
         let c1 = *v[0];
         let c2 = *v[1];
         let dist = c1.distance(&c2);
         combinations.entry(dist).or_default().push((c1, c2));
     });
+    // convert back to BTreeMap for ordered keys once at the end, more performant
+    combinations.into_iter().collect()
+}
 
-    let mut max_count = iters;
+pub fn part_one(input: &str) -> Option<usize> {
+    let mut circuits = parse_circuits(input);
+
+    let combinations = compute_combinations(&circuits);
+
+    let mut iters = if circuits.len() < 100 { 10 } else { 1000 };
     for distance in combinations.keys() {
-        if max_count <= 0 {
+        if iters <= 0 {
             break;
         }
         let combinations = combinations.get(distance).unwrap();
         for (a, b) in combinations {
             let id1 = *circuits.get(a).unwrap_or(&0);
             let id2 = *circuits.get(b).unwrap_or(&0);
+            if id1 == id2 {
+                iters -= 1;
+                continue;
+            }
+            // combine circuits
             circuits
                 .iter_mut()
                 .filter(|(_coord, cid)| **cid == id2)
                 .for_each(|(_coord, cid)| {
                     *cid = id1;
                 });
-            max_count -= 1;
+            iters -= 1;
         }
     }
 
@@ -116,24 +131,18 @@ pub fn part_one(input: &str) -> Option<usize> {
 pub fn part_two(input: &str) -> Option<usize> {
     let mut circuits = parse_circuits(input);
 
-    let mut combinations: BTreeMap<usize, Vec<(Coord3, Coord3)>> = BTreeMap::new();
-    circuits.keys().combinations(2).for_each(|v| {
-        let c1 = *v[0];
-        let c2 = *v[1];
-        let dist = c1.distance(&c2);
-        combinations.entry(dist).or_default().push((c1, c2));
-    });
+    let combinations = compute_combinations(&circuits);
 
-    let mut result_found = false;
     let mut xs: Option<(usize, usize)> = None;
-    for distance in combinations.keys() {
-        if result_found {
-            break;
-        }
+    combinations.keys().any(|distance| {
         let combinations = combinations.get(distance).unwrap();
         for (a, b) in combinations {
             let id1 = *circuits.get(a).unwrap();
             let id2 = *circuits.get(b).unwrap();
+            if id1 == id2 {
+                // already connected
+                continue;
+            }
             circuits
                 .iter_mut()
                 .filter(|(_coord, cid)| **cid == id2)
@@ -142,13 +151,14 @@ pub fn part_two(input: &str) -> Option<usize> {
                 });
             if circuits.values().all(|&cid| cid == id1) {
                 xs = Some((a.x(), b.x()));
-                result_found = true;
-                break;
+                return true;
             }
         }
-    }
+        false
+    });
 
-    Some(xs.unwrap().0 * xs.unwrap().1)
+    let xs = xs.unwrap();
+    Some(xs.0 * xs.1)
 }
 
 #[cfg(test)]
