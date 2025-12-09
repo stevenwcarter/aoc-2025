@@ -1,55 +1,12 @@
 use std::collections::BTreeMap;
 
+use advent_of_code::Coord3;
 use atoi_simd::parse;
 use hashbrown::HashMap;
 use itertools::Itertools;
 use nohash::BuildNoHashHasher;
 
 advent_of_code::solution!(8);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Coord3(usize, usize, usize);
-
-impl Coord3 {
-    /// Create a new 3D coordinate given x, y, and z values
-    pub fn new(x: usize, y: usize, z: usize) -> Self {
-        Coord3(x, y, z)
-    }
-
-    /// Returns x portion of coordinate
-    #[inline]
-    pub fn x(&self) -> usize {
-        self.0
-    }
-
-    /// Returns y portion of coordinate
-    #[inline]
-    pub fn y(&self) -> usize {
-        self.1
-    }
-
-    /// Returns z portion of coordinate
-    #[inline]
-    pub fn z(&self) -> usize {
-        self.2
-    }
-
-    #[inline]
-    // strangely, keeping the sqrt improves performance
-    // TODO: check out what the compiler does here
-    pub fn distance(&self, other: &Coord3) -> usize {
-        ((self.x().abs_diff(other.x()).pow(2)
-            + self.y().abs_diff(other.y()).pow(2)
-            + self.z().abs_diff(other.z()).pow(2)) as f32)
-            .sqrt() as usize
-    }
-}
-
-impl From<(usize, usize, usize)> for Coord3 {
-    fn from(value: (usize, usize, usize)) -> Self {
-        Coord3(value.0, value.1, value.2)
-    }
-}
 
 fn parse_circuits(input: &str) -> HashMap<Coord3, usize> {
     let mut circuit_id = 0;
