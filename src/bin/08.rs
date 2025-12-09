@@ -35,6 +35,8 @@ impl Coord3 {
     }
 
     #[inline]
+    // strangely, keeping the sqrt improves performance
+    // TODO: check out what the compiler does here
     pub fn distance(&self, other: &Coord3) -> usize {
         ((self.x().abs_diff(other.x()).pow(2)
             + self.y().abs_diff(other.y()).pow(2)
@@ -151,7 +153,7 @@ pub fn part_two(input: &str) -> Option<usize> {
                 });
             if circuits.values().all(|&cid| cid == id1) {
                 xs = Some((a.x(), b.x()));
-                return true;
+                return true; // short-circuit outer loop (why I used any)
             }
         }
         false
