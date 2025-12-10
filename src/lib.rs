@@ -21,6 +21,12 @@ where
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Coord(i32, i32);
 
+impl AsRef<Coord> for Coord {
+    fn as_ref(&self) -> &Coord {
+        self
+    }
+}
+
 impl Coord {
     /// Create a new coordinate given x and y values
     pub fn new(x: i32, y: i32) -> Self {
@@ -166,24 +172,26 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
-    pub fn area(&self) -> i32 {
+    pub fn area(&self) -> usize {
         let width = self.top_left.x().max(self.bottom_right.x())
             - self.top_left.x().min(self.bottom_right.x());
         let height = self.top_left.y().max(self.bottom_right.y())
             - self.top_left.y().min(self.bottom_right.y());
-        width * height
+        width as usize * height as usize
     }
-    pub fn area_inclusive(&self) -> i32 {
+    pub fn area_inclusive(&self) -> usize {
         let width = self.top_left.x().max(self.bottom_right.x())
             - self.top_left.x().min(self.bottom_right.x())
             + 1;
         let height = self.top_left.y().max(self.bottom_right.y())
             - self.top_left.y().min(self.bottom_right.y())
             + 1;
-        width * height
+        width as usize * height as usize
     }
 
-    pub fn new(first: Coord, second: Coord) -> Self {
+    pub fn new<T: AsRef<Coord>>(first: T, second: T) -> Self {
+        let first = first.as_ref();
+        let second = second.as_ref();
         let top_left = Coord::from((first.x().min(second.x()), first.y().min(second.y())));
         let bottom_right = Coord::from((first.x().max(second.x()), first.y().max(second.y())));
         Rectangle {
@@ -237,7 +245,7 @@ mod tests {
 
     #[test]
     fn rectangle_area() {
-        let rect = Rectangle::new((0, 0).into(), (10, 10).into());
+        let rect = Rectangle::new(Coord::from((0, 0)), Coord::from((10, 10)));
         assert_eq!(rect.area(), 100);
     }
 }

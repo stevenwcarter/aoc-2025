@@ -5,69 +5,9 @@ use atoi_simd::parse;
 use hashbrown::HashMap;
 use itertools::Itertools;
 use nohash::BuildNoHashHasher;
+use union_find::{QuickUnionUf, UnionBySize, UnionFind};
 
 advent_of_code::solution!(8);
-
-struct UnionFind {
-    parent: Vec<usize>,
-    rank: Vec<usize>,
-    size: Vec<usize>,
-}
-
-impl UnionFind {
-    fn new(n: usize) -> Self {
-        Self {
-            parent: (0..n).collect(),
-            rank: vec![0; n],
-            size: vec![1; n],
-        }
-    }
-
-    fn find(&mut self, x: usize) -> usize {
-        if self.parent[x] != x {
-            self.parent[x] = self.find(self.parent[x]); // path compression
-        }
-        self.parent[x]
-    }
-
-    fn union(&mut self, x: usize, y: usize) -> bool {
-        let root_x = self.find(x);
-        let root_y = self.find(y);
-
-        if root_x == root_y {
-            return false; // already connected
-        }
-
-        // union by rank
-        if self.rank[root_x] < self.rank[root_y] {
-            self.parent[root_x] = root_y;
-            self.size[root_y] += self.size[root_x];
-        } else if self.rank[root_x] > self.rank[root_y] {
-            self.parent[root_y] = root_x;
-            self.size[root_x] += self.size[root_y];
-        } else {
-            self.parent[root_y] = root_x;
-            self.size[root_x] += self.size[root_y];
-            self.rank[root_x] += 1;
-        }
-        true
-    }
-
-    fn component_sizes(&mut self) -> Vec<usize> {
-        let mut sizes = Vec::new();
-        for i in 0..self.parent.len() {
-            if self.find(i) == i {
-                sizes.push(self.size[i]);
-            }
-        }
-        sizes
-    }
-
-    fn all_connected(&mut self) -> bool {
-        let root = self.find(0);
-        (1..self.parent.len()).all(|i| self.find(i) == root)
-    }
-}
 
 #[inline(always)]
 fn parse_usize(input: &str) -> usize {
@@ -106,6 +46,17 @@ fn compute_combinations_indexed(circuits: &[Coord3]) -> BTreeMap<u32, Vec<(usize
     combinations.into_iter().collect()
 }
 
+fn component_sizes(uf: &mut QuickUnionUf<UnionBySize>) -> HashMap<usize, usize> {
+    let mut sizes = HashMap::new();
+
+    for i in 0..uf.size() {
+        let root = uf.find(i); // also does path compression
+        *sizes.entry(root).or_insert(0) += 1;
+    }
+
+    sizes
+}
+
 // Connect the first thousand circuits, then return the product of the sizes of the three largest
 // connected graphs
 pub fn part_one(input: &str) -> Option<usize> {
@@ -113,28 +64,32 @@ pub fn part_one(input: &str) -> Option<usize> {
 
     let combinations = compute_combinations_indexed(&circuits);
 
-    let mut uf = UnionFind::new(circuits.len());
+    // let mut uf = UnionFind::new(circuits.len());
+    // let mut uf = UnionFind::new(circuits.len());
+    let mut uf = QuickUnionUf::<UnionBySize>::new(circuits.len());
 
-    let mut connections = if input.lines().collect_vec().len() < 100 {
-        10
-    } else {
-        1000
-    };
+    #[allow(unused)]
+    let mut connections = 1000;
+    #[cfg(test)]
+    let mut connections = 10;
 
-    for distance in combinations.keys() {
+    for (_, pairs) in combinations {
         if connections <= 0 {
             break;
         }
-        let pairs = combinations.get(distance).unwrap();
-        for &(i, j) in pairs {
-            if uf.union(i, j) && connections <= 0 {
+        // let pairs = combinations.get(distance).unwrap();
+        for &(i, j) in pairs.iter() {
+            if uf.union(i, j) && connections == 0 {
                 break;
             }
             connections -= 1;
         }
     }
 
-    let mut sizes = uf.component_sizes();
+    let mut sizes = component_sizes(&mut uf)
+        .values()
+        .cloned()
+        .collect::<Vec<usize>>();
     sizes.sort_by(|a, b| b.cmp(a));
     Some(sizes[0..3].iter().product())
 }
@@ -144,12 +99,15 @@ pub fn part_one(input: &str) -> Option<usize> {
 pub fn part_two(input: &str) -> Option<usize> {
     let circuits = parse_circuits_indexed(input);
     let combinations = compute_combinations_indexed(&circuits);
-    let mut uf = UnionFind::new(circuits.len());
+
+    let circuits_len = circuits.len();
+
+    let mut uf = QuickUnionUf::<UnionBySize>::new(circuits_len);
 
     for distance in combinations.keys() {
         let pairs = combinations.get(distance).unwrap();
         for &(i, j) in pairs {
-            if uf.union(i, j) && uf.all_connected() {
+            if uf.union(i, j) && uf.get(0).size() == circuits_len {
                 return Some(circuits[i].x() * circuits[j].x());
             }
         }
