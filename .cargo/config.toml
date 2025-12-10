@@ -12,4 +12,5 @@ time = "run --quiet --release -- time"
 AOC_YEAR = "2025"
 
 [build]
-rustflags = ["-C", "target-cpu=native", "-C", "force-frame-pointers=yes"]
+# rustflags = ["-C", "target-cpu=native", "-C", "force-frame-pointers=yes"]
+rustflags = ["-C", "target-cpu=native"]

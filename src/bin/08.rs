@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use advent_of_code::Coord3;
-use atoi_simd::parse;
+use atoi_simd::parse_pos;
 use hashbrown::HashMap;
 use itertools::Itertools;
 use nohash::BuildNoHashHasher;
@@ -11,7 +11,7 @@ advent_of_code::solution!(8);
 
 #[inline(always)]
 fn parse_usize(input: &str) -> usize {
-    parse::<usize>(input.as_bytes()).unwrap()
+    parse_pos::<usize>(input.as_bytes()).unwrap()
 }
 
 fn parse_circuits_indexed(input: &str) -> Vec<Coord3> {

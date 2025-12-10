@@ -1,5 +1,3 @@
-use atoi_simd::parse;
-
 advent_of_code::solution!(1);
 
 const DIAL_START: i16 = 50;
