@@ -1,6 +1,4 @@
-use std::sync::{Arc, RwLock};
-
-use advent_of_code::{Coord, Rectangle};
+use advent_of_code::{Coord, Maxer, Rectangle};
 use atoi_simd::parse_pos;
 use hashbrown::HashSet;
 use itertools::Itertools;
@@ -22,7 +20,6 @@ fn find_area(pair: &[&Coord]) -> usize {
 fn parse_coords(input: &str) -> Vec<Coord> {
     input
         .lines()
-        .par_bridge()
         .map(|line| {
             let (x, y) = line.split_once(',').unwrap();
             Coord::from((
@@ -44,7 +41,7 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    let answer = Arc::new(RwLock::new(0));
+    let max = Maxer::default();
     let coords = parse_coords(input);
     let edges = coords
         .iter()
@@ -53,19 +50,18 @@ pub fn part_two(input: &str) -> Option<usize> {
         .collect_vec();
 
     coords.par_iter().enumerate().for_each(|(i, t1)| {
-        for t2 in coords[i + 1..].iter() {
-            let inner_rect = Rectangle::new(*t1, *t2).inset(1);
+        let mut max = max.clone();
+        coords[i + 1..].iter().for_each(|t2| {
+            let rect = Rectangle::new(*t1, *t2);
+            let inner_rect = rect.inset(1);
 
             if edges.iter().all(|e| inner_rect.intersection(e).is_none()) {
-                let area = ((t1.x() - t2.x()).abs() + 1) * ((t1.y() - t2.y()).abs() + 1);
-                let mut answer = answer.write().unwrap();
-                *answer = answer.max(area);
+                max.max(rect.area_inclusive() as usize);
             }
-        }
+        });
     });
 
-    let ans = answer.read().unwrap();
-    Some(*ans as usize)
+    Some(max.get())
 }
 
 #[allow(unused)]

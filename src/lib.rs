@@ -1,6 +1,22 @@
+use rayon::prelude::*;
 use std::cmp::{max, min};
 
 pub mod template;
+mod utils;
+pub use utils::*;
+
+pub fn par_process_lines<R, F, T>(reader: R, f: F) -> Vec<T>
+where
+    R: AsRef<str>,
+    F: Sync + Send + Fn(&str) -> T,
+    T: Send,
+{
+    // 1. Read in order:
+    let lines: Vec<&str> = reader.as_ref().lines().collect();
+
+    // 2. Parallel map, order preserved:
+    lines.par_iter().map(|s| f(s)).collect()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Coord(i32, i32);
@@ -151,13 +167,19 @@ pub struct Rectangle {
 
 impl Rectangle {
     pub fn area(&self) -> i32 {
-        dbg!(self);
         let width = self.top_left.x().max(self.bottom_right.x())
             - self.top_left.x().min(self.bottom_right.x());
         let height = self.top_left.y().max(self.bottom_right.y())
             - self.top_left.y().min(self.bottom_right.y());
-        dbg!(self.top_left.y(), self.bottom_right.y());
-        dbg!(width, height, width * height);
+        width * height
+    }
+    pub fn area_inclusive(&self) -> i32 {
+        let width = self.top_left.x().max(self.bottom_right.x())
+            - self.top_left.x().min(self.bottom_right.x())
+            + 1;
+        let height = self.top_left.y().max(self.bottom_right.y())
+            - self.top_left.y().min(self.bottom_right.y())
+            + 1;
         width * height
     }
 
