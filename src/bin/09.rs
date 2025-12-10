@@ -1,7 +1,12 @@
+use std::sync::{Arc, RwLock};
+
 use advent_of_code::{Coord, Rectangle};
 use atoi_simd::parse_pos;
 use hashbrown::HashSet;
 use itertools::Itertools;
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator,
+};
 
 advent_of_code::solution!(9);
 
@@ -14,6 +19,20 @@ fn find_area(pair: &[&Coord]) -> usize {
     (max_x - min_x + 1) as usize * (max_y - min_y + 1) as usize
 }
 
+fn parse_coords(input: &str) -> Vec<Coord> {
+    input
+        .lines()
+        .par_bridge()
+        .map(|line| {
+            let (x, y) = line.split_once(',').unwrap();
+            Coord::from((
+                parse_pos::<usize>(x.trim().as_bytes()).unwrap() as i32,
+                parse_pos::<usize>(y.trim().as_bytes()).unwrap() as i32,
+            ))
+        })
+        .collect()
+}
+
 pub fn part_one(input: &str) -> Option<usize> {
     let coords = parse_coords(input);
 
@@ -24,20 +43,8 @@ pub fn part_one(input: &str) -> Option<usize> {
         .max()
 }
 
-fn parse_coords(input: &str) -> Vec<Coord> {
-    input
-        .lines()
-        .map(|line| {
-            let (a, b) = line.split_once(',').unwrap();
-            Coord::from((
-                parse_pos::<usize>(a.trim().as_bytes()).unwrap() as i32,
-                parse_pos::<usize>(b.trim().as_bytes()).unwrap() as i32,
-            ))
-        })
-        .collect()
-}
 pub fn part_two(input: &str) -> Option<usize> {
-    let mut answer = 0;
+    let answer = Arc::new(RwLock::new(0));
     let coords = parse_coords(input);
     let edges = coords
         .iter()
@@ -45,18 +52,20 @@ pub fn part_two(input: &str) -> Option<usize> {
         .map(|(a, b)| Rectangle::new(*a, *b))
         .collect_vec();
 
-    for (i, t1) in coords.iter().enumerate() {
+    coords.par_iter().enumerate().for_each(|(i, t1)| {
         for t2 in coords[i + 1..].iter() {
             let inner_rect = Rectangle::new(*t1, *t2).inset(1);
 
             if edges.iter().all(|e| inner_rect.intersection(e).is_none()) {
                 let area = ((t1.x() - t2.x()).abs() + 1) * ((t1.y() - t2.y()).abs() + 1);
-                answer = answer.max(area);
+                let mut answer = answer.write().unwrap();
+                *answer = answer.max(area);
             }
         }
-    }
+    });
 
-    Some(answer as usize)
+    let ans = answer.read().unwrap();
+    Some(*ans as usize)
 }
 
 #[allow(unused)]
