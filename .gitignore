@@ -31,3 +31,5 @@ data/timings.json
 /*.txt
 dhat*
 flamegraph.svg
+perf.data
+perf.data.old
