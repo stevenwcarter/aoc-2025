@@ -6,15 +6,6 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIter
 
 advent_of_code::solution!(9);
 
-fn find_area(pair: &[&Coord]) -> usize {
-    let min_x = pair.iter().map(|c| c.x()).min().unwrap();
-    let max_x = pair.iter().map(|c| c.x()).max().unwrap();
-    let min_y = pair.iter().map(|c| c.y()).min().unwrap();
-    let max_y = pair.iter().map(|c| c.y()).max().unwrap();
-
-    (max_x - min_x + 1) as usize * (max_y - min_y + 1) as usize
-}
-
 fn parse_coords(input: &str) -> Vec<Coord> {
     input
         .lines()
@@ -97,13 +88,5 @@ mod tests {
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(24));
-    }
-    #[test]
-    fn test_find_area() {
-        let coords = [Coord::from((1, 1)), Coord::from((4, 5))];
-        let area = find_area(&coords.iter().collect::<Vec<&Coord>>());
-        assert_eq!(area, 20);
-        let rect = Rectangle::new(coords[0], coords[1]);
-        assert_eq!(rect.area_inclusive(), 20);
     }
 }
