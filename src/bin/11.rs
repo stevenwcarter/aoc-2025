@@ -7,14 +7,25 @@ advent_of_code::solution!(11);
 
 static PATHS: OnceLock<HashMap<String, Vec<String>>> = OnceLock::new();
 
-fn walk_paths(paths: &HashMap<&str, Vec<&str>>, current: &str) -> u64 {
+fn walk_paths<'a>(
+    paths: &HashMap<&'a str, Vec<&'a str>>,
+    current: &str,
+    visited: &mut HashMap<&'a str, usize>,
+) -> u64 {
     if current == "out" {
         return 1;
     }
 
     let mut total = 0;
     for next in paths.get(&current).unwrap_or(&vec![]) {
-        total += walk_paths(paths, next);
+        if visited.contains_key(next) {
+            total += *visited.get(next).unwrap() as u64;
+            continue;
+        } else {
+            let result = walk_paths(paths, next, visited);
+            visited.insert(next, result as usize);
+            total += result;
+        }
     }
     total
 }
@@ -55,7 +66,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         paths.insert(input, outputs);
     });
 
-    Some(walk_paths(&paths, "you"))
+    Some(walk_paths(&paths, "you", &mut HashMap::new()))
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
