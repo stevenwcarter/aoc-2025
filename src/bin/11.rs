@@ -8,7 +8,7 @@ advent_of_code::solution!(11);
 static PATHS: OnceLock<HashMap<String, Vec<String>>> = OnceLock::new();
 
 fn walk_paths<'a>(
-    paths: &HashMap<&'a str, Vec<&'a str>>,
+    paths: &HashMap<&str, Vec<&'a str>>,
     current: &str,
     visited: &mut HashMap<&'a str, usize>,
 ) -> u64 {
