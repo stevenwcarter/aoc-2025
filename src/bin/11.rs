@@ -7,16 +7,14 @@ advent_of_code::solution!(11);
 
 static PATHS: OnceLock<HashMap<String, Vec<String>>> = OnceLock::new();
 
-#[cached]
-fn walk_paths(current: String) -> u64 {
-    let paths = PATHS.get().unwrap();
+fn walk_paths(paths: &HashMap<&str, Vec<&str>>, current: &str) -> u64 {
     if current == "out" {
         return 1;
     }
 
     let mut total = 0;
     for next in paths.get(&current).unwrap_or(&vec![]) {
-        total += walk_paths(next.to_string());
+        total += walk_paths(paths, next);
     }
     total
 }
@@ -49,16 +47,15 @@ fn walk_paths_part2(current: String, dac_seen: bool, fft_seen: bool) -> u64 {
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
-    let mut paths: HashMap<String, Vec<String>> = HashMap::new();
+    let mut paths: HashMap<&str, Vec<&str>> = HashMap::new();
     input.lines().for_each(|line| {
         let (input, outputs) = line.split_once(":").expect("Invalid input");
-        let outputs: Vec<String> = outputs.split_whitespace().map(|a| a.to_owned()).collect();
+        let outputs: Vec<&str> = outputs.split_whitespace().collect();
 
-        paths.insert(input.to_owned(), outputs);
+        paths.insert(input, outputs);
     });
-    PATHS.get_or_init(|| paths.clone());
 
-    Some(walk_paths("you".to_string()))
+    Some(walk_paths(&paths, "you"))
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
