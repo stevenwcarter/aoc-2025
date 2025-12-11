@@ -195,29 +195,6 @@ impl Machine {
 
         result
     }
-
-    fn min_presses(machine: &Machine, cost_fn: impl Fn(usize) -> u32) -> Option<u32> {
-        let n = machine.buttons.len();
-        let mut min_cost = u32::MAX;
-        for mask in 0..(1 << n) {
-            let mut state = 0u16;
-            let mut cost = 0;
-            for i in 0..n {
-                if mask & (1 << i) != 0 {
-                    state ^= machine.buttons[i];
-                    cost += cost_fn(i); // Use desired cost-per-button
-                }
-            }
-            if state == machine.indicator_lights {
-                min_cost = min_cost.min(cost);
-            }
-        }
-        if min_cost == u32::MAX {
-            None
-        } else {
-            Some(min_cost)
-        }
-    }
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
@@ -228,7 +205,9 @@ pub fn part_one(input: &str) -> Option<usize> {
             .par_iter()
             .map(|machine| {
                 // For each machine, determine the minimum number of button presses required to match the indicator lights
-                machine.find_required_presses_part1().unwrap()
+                machine
+                    .find_required_presses_part1()
+                    .expect("could not find solution for this machine")
             })
             .sum(),
     )
