@@ -1,12 +1,14 @@
-use std::collections::BTreeMap;
-
 use advent_of_code::Coord3;
-use hashbrown::HashMap;
-use itertools::Itertools;
-use nohash::BuildNoHashHasher;
 use union_find::{QuickUnionUf, UnionBySize, UnionFind};
 
 advent_of_code::solution!(8);
+
+#[derive(Copy, Clone)]
+struct Edge {
+    d: u32,
+    i: usize,
+    j: usize,
+}
 
 #[inline(always)]
 fn parse_usize(input: &str) -> usize {
@@ -17,101 +19,109 @@ fn parse_usize(input: &str) -> usize {
     result
 }
 
-fn parse_circuits_indexed(input: &str) -> Vec<Coord3> {
+fn parse_circuits(input: &str) -> Vec<Coord3> {
     input
         .lines()
         .map(|l| {
-            Coord3::from(
-                l.split(',')
-                    .map(parse_usize)
-                    .collect_tuple::<(usize, usize, usize)>()
-                    .unwrap(),
-            )
+            let mut it = l.split(',');
+            let x = parse_usize(it.next().unwrap());
+            let y = parse_usize(it.next().unwrap());
+            let z = parse_usize(it.next().unwrap());
+            Coord3::from((x, y, z))
         })
         .collect()
 }
 
-fn compute_combinations_indexed(circuits: &[Coord3]) -> BTreeMap<u32, Vec<(usize, usize)>> {
-    // no hashing to speed up initial insertion
-    let mut combinations: HashMap<u32, Vec<(usize, usize)>, BuildNoHashHasher<u32>> =
-        HashMap::with_hasher(BuildNoHashHasher::default());
-
-    (0..circuits.len()).combinations(2).for_each(|pair| {
-        let i = pair[0];
-        let j = pair[1];
-        let dist = circuits[i].distance(&circuits[j]);
-        if dist < 15_000 {
-            // simple distance cutoff to reduce number of combinations
-            combinations.entry(dist).or_default().push((i, j));
-        }
-    });
-    // convert back to BTreeMap for ordered keys once at the end, more performant
-    combinations.into_iter().collect()
+#[inline(always)]
+fn edge_cmp(a: &Edge, b: &Edge) -> core::cmp::Ordering {
+    a.d.cmp(&b.d)
+        .then_with(|| a.i.cmp(&b.i))
+        .then_with(|| a.j.cmp(&b.j))
 }
 
-fn component_sizes(uf: &mut QuickUnionUf<UnionBySize>) -> HashMap<usize, usize> {
-    let mut sizes = HashMap::new();
+fn compute_edges(circuits: &[Coord3]) -> Vec<Edge> {
+    let n = circuits.len();
+    let mut edges = Vec::with_capacity(n * (n - 1) / 2);
 
-    for i in 0..uf.size() {
-        let root = uf.find(i); // also does path compression
-        *sizes.entry(root).or_insert(0) += 1;
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let d = circuits[i].distance(&circuits[j]); // IMPORTANT: use your existing metric
+            edges.push(Edge { d, i, j });
+        }
     }
 
-    sizes
+    edges
 }
 
-// Connect the first thousand circuits, then return the product of the sizes of the three largest
-// connected graphs
+fn radix_sort_edges(edges: &mut [Edge]) {
+    const RADIX: usize = 256;
+    let mut tmp = vec![edges[0]; edges.len()];
+
+    for shift in (0..32).step_by(8) {
+        let mut count = [0usize; RADIX];
+
+        for e in edges.iter() {
+            count[((e.d >> shift) & 0xFF) as usize] += 1;
+        }
+
+        let mut sum = 0;
+        for c in count.iter_mut() {
+            let t = *c;
+            *c = sum;
+            sum += t;
+        }
+
+        for &e in edges.iter() {
+            let idx = ((e.d >> shift) & 0xFF) as usize;
+            tmp[count[idx]] = e;
+            count[idx] += 1;
+        }
+
+        edges.copy_from_slice(&tmp);
+    }
+}
+
 pub fn part_one(input: &str) -> Option<usize> {
-    let circuits = parse_circuits_indexed(input);
+    let circuits = parse_circuits(input);
+    let mut edges = compute_edges(&circuits);
 
-    let combinations = compute_combinations_indexed(&circuits);
+    let k = if cfg!(test) { 10 } else { 1000 };
 
-    // let mut uf = UnionFind::new(circuits.len());
-    // let mut uf = UnionFind::new(circuits.len());
+    // only sort the first edges that are needed
+    edges.select_nth_unstable_by(k, edge_cmp);
+    edges[..k].sort_unstable_by(edge_cmp);
+
     let mut uf = QuickUnionUf::<UnionBySize>::new(circuits.len());
 
-    #[allow(unused)]
-    let mut connections = 1000;
-    #[cfg(test)]
-    let mut connections = 10;
-
-    for (_, pairs) in combinations {
-        if connections <= 0 {
-            break;
-        }
-        // let pairs = combinations.get(distance).unwrap();
-        for &(i, j) in pairs.iter() {
-            if uf.union(i, j) && connections == 0 {
-                break;
-            }
-            connections -= 1;
-        }
+    for e in &edges[..k] {
+        uf.union(e.i, e.j);
     }
 
-    let mut sizes = component_sizes(&mut uf)
-        .values()
-        .cloned()
-        .collect::<Vec<usize>>();
-    sizes.sort_by(|a, b| b.cmp(a));
-    Some(sizes[0..3].iter().product())
+    let mut sizes = Vec::new();
+    for i in 0..uf.size() {
+        if uf.find(i) == i {
+            sizes.push(uf.get(i).size());
+        }
+    }
+    sizes.sort_unstable_by(|a, b| b.cmp(a));
+    Some(sizes[0] * sizes[1] * sizes[2])
 }
 
-/// Connect all circuits, then return the product of the x-coordinates of the two last connected
-/// (which caused them all to be connected)
 pub fn part_two(input: &str) -> Option<usize> {
-    let circuits = parse_circuits_indexed(input);
-    let combinations = compute_combinations_indexed(&circuits);
+    let circuits = parse_circuits(input);
+    let mut edges = compute_edges(&circuits);
 
-    let circuits_len = circuits.len();
+    radix_sort_edges(&mut edges);
 
-    let mut uf = QuickUnionUf::<UnionBySize>::new(circuits_len);
+    let n = circuits.len();
+    let mut uf = QuickUnionUf::<UnionBySize>::new(n);
+    let mut components = n;
 
-    for distance in combinations.keys() {
-        let pairs = combinations.get(distance).unwrap();
-        for &(i, j) in pairs {
-            if uf.union(i, j) && uf.get(0).size() == circuits_len {
-                return Some(circuits[i].x() * circuits[j].x());
+    for e in edges {
+        if uf.union(e.i, e.j) {
+            components -= 1;
+            if components == 1 {
+                return Some(circuits[e.i].x() * circuits[e.j].x());
             }
         }
     }
