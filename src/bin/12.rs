@@ -1,4 +1,3 @@
-use atoi_simd::parse_pos;
 use memchr::memchr;
 
 advent_of_code::solution!(12, 1);
@@ -8,8 +7,8 @@ advent_of_code::solution!(12, 1);
 /// Sample line for reference: `39x43: 23 41 27 30 29 31`
 #[inline]
 fn check_presents_fit(input: &[u8]) -> usize {
-    let width: u32 = parse_pos(&input[0..2]).unwrap();
-    let height: u32 = parse_pos(&input[3..5]).unwrap();
+    let width: u32 = (input[0] - b'0') as u32 * 10 + (input[1] - b'0') as u32;
+    let height: u32 = (input[3] - b'0') as u32 * 10 + (input[4] - b'0') as u32;
 
     let w = (width as f32 / 3.).ceil() as u32;
     let h = (height as f32 / 3.).ceil() as u32;
