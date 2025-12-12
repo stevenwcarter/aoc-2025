@@ -2,33 +2,29 @@ use memchr::memchr;
 
 advent_of_code::solution!(12, 1);
 
-#[inline(always)]
-fn parse_2d(input: &[u8], i: usize) -> usize {
-    ((input[i] - b'0') as usize) * 10 + ((input[i + 1] - b'0') as usize)
-}
-
 /// Parses the present fitting input and checks if all presents fit in the given area.
 /// The input is exactly the same format, so we can use direct indexes and no searches here
 /// Sample line for reference: `39x43: 23 41 27 30 29 31`
-#[inline(always)]
-fn check_presents_fit(input: &[u8]) -> usize {
-    let width: usize = (input[0] - b'0') as usize * 10 + (input[1] - b'0') as usize;
-    let height: usize = (input[3] - b'0') as usize * 10 + (input[4] - b'0') as usize;
+#[inline]
+fn check_presents_fit(input: &[u8]) -> u32 {
+    let width: u32 = (input[0] - b'0') as u32 * 10 + (input[1] - b'0') as u32;
+    let height: u32 = (input[3] - b'0') as u32 * 10 + (input[4] - b'0') as u32;
 
-    let w = width.div_ceil(3);
-    let h = height.div_ceil(3);
+    let w = (width as f32 / 3.).ceil() as u32;
+    let h = (height as f32 / 3.).ceil() as u32;
 
-    let total_present_count = parse_2d(input, 7)
-        + parse_2d(input, 10)
-        + parse_2d(input, 13)
-        + parse_2d(input, 16)
-        + parse_2d(input, 19)
-        + parse_2d(input, 22);
+    let mut present_index = 7;
+    let mut total_present_count = 0;
+    while present_index < 24 {
+        total_present_count += (input[present_index] - b'0') as u32 * 10;
+        total_present_count += (input[present_index + 1] - b'0') as u32;
+        present_index += 3;
+    }
 
-    (w * h >= total_present_count) as usize
+    (w * h >= total_present_count) as u32
 }
 
-pub fn part_one(input: &str) -> Option<usize> {
+pub fn part_one(input: &str) -> Option<u32> {
     let input = input.as_bytes();
 
     // find first x, which is first in the dimensions for the blocks (don't need to parse
