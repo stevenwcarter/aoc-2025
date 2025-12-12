@@ -1,5 +1,5 @@
 use atoi_simd::parse_pos;
-use memchr::memchr;
+use memchr::{memchr, memrchr};
 
 advent_of_code::solution!(12, 1);
 
@@ -25,11 +25,9 @@ pub fn part_one(input: &str) -> Option<usize> {
     // find first x, which is first in the dimensions for the blocks (don't need to parse
     // presents for this puzzle)
     let first_x = memchr(b'x', input.as_bytes()).unwrap();
-    let start = input[..first_x].rfind('\n').unwrap() + 1;
+    let start = memrchr(b'\n', &input.as_bytes()[..first_x]).unwrap() + 1;
 
-    let (_, areas) = input.split_at(start);
-
-    let solution: usize = areas
+    let solution: usize = input[start..]
         .lines()
         .filter(|area| check_presents_fit(area))
         .count();
