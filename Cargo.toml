@@ -44,3 +44,4 @@ tinyjson = "2.5.1"
 union-find = "0.4.3"
 
 # Solution dependencies
+minilp = "0.2.2"
